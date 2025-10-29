@@ -1,0 +1,16 @@
+Flask
+Flask-Caching
+Flask-Cors
+uWSGI
+PyYAML
+psycopg2-binary
+passlib
+numpy
+geopandas
+netCDF4
+dask
+zarr
+xarray
+rasterio
+odc-geo
+Markdown
