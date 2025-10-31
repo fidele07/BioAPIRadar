@@ -15,3 +15,5 @@ rasterio
 odc-geo
 Markdown
 rpy2
+matplotlib
+scipy

@@ -4,5 +4,10 @@ radar:
     format_file: 'vol_%Y-%m-%d_%H-%M-%S.h5'
 vp:
     dir: /Users/rijaf/Desktop/RADAR/biorad_vp/outputs
+    sevip:
+        missval: -99999
+        lon: lon
+        lat: lat
+        time: time
 class:
     dir: /Users/rijaf/Desktop/RADAR/classification/outputs

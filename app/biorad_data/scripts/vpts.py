@@ -37,9 +37,6 @@ def _download_vp_data(params, vp_fun, vp_file):
     data_dir = GLOBAL_CONFIG['vp']['dir']
     with conversion.localconverter(default_converter):
         rparams = ListVector(params)
-        # robj = biorad.get_vp(data_dir, rparams)
-        # robj = biorad.get_vpts(data_dir, rparams)
-        # robj = biorad.get_vtip(data_dir, rparams)
         robj = robjects.r[vp_fun](data_dir, rparams)
         pyobj = {key : robj.rx2(key)[0] for key in robj.names}
 
@@ -52,3 +49,4 @@ def _download_vp_data(params, vp_fun, vp_file):
             )
 
     return response_download_json(pyobj, params, vp_file)
+
