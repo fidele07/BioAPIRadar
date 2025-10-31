@@ -19,8 +19,8 @@ import config
 import tempfile
 
 os.environ['MPLCONFIGDIR'] = tempfile.mkdtemp()
-os.environ['R_HOME'] = config.R_HOME
-os.environ['R_LIBS_SITE'] = config.R_LIBS_SITE
+# os.environ['R_HOME'] = config.R_HOME
+# os.environ['R_LIBS_SITE'] = config.R_LIBS_SITE
 
 ### 
 from app.biorad_data.index import biorad_data
