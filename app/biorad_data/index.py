@@ -16,48 +16,17 @@ biorad_data = Blueprint('biorad_data', __name__)
 
 @biorad_data.route('/get_vp', methods=['GET', 'POST'])
 def get_vp():
-    if request.method == 'GET':
-        params = format_get_request(request.args)
-    else:
-        params = request.get_json()
-
-    try:
-        params['httpMethod'] = request.method
-        return download_vp(params)
-    except Exception as e:
-        if request.method == 'GET':
-            return make_response(
-                    jsonify({'message': str(e)}),
-                    500
-                )
-        else:
-            return json.dumps(
-                    {'status': -1, 'message': str(e)}
-                )
+    return _get_vp_data(download_vp)
 
 @biorad_data.route('/get_vpts', methods=['GET', 'POST'])
 def get_vpts():
-    if request.method == 'GET':
-        params = format_get_request(request.args)
-    else:
-        params = request.get_json()
-
-    try:
-        params['httpMethod'] = request.method
-        return download_vpts(params)
-    except Exception as e:
-        if request.method == 'GET':
-            return make_response(
-                    jsonify({'message': str(e)}),
-                    500
-                )
-        else:
-            return json.dumps(
-                    {'status': -1, 'message': str(e)}
-                )
+    return _get_vp_data(download_vpts)
 
 @biorad_data.route('/get_vtip', methods=['GET', 'POST'])
 def get_vtip():
+    return _get_vp_data(download_vtip)
+
+def _get_vp_data(callback):
     if request.method == 'GET':
         params = format_get_request(request.args)
     else:
@@ -65,7 +34,7 @@ def get_vtip():
 
     try:
         params['httpMethod'] = request.method
-        return download_vtip(params)
+        return callback(params)
     except Exception as e:
         if request.method == 'GET':
             return make_response(
