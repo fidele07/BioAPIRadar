@@ -1,0 +1,8 @@
+radar:
+    dir: /Users/rijaf/Desktop/RADAR/DATA/ODIM_H5
+    format_dir: '%Y%m%d'
+    format_file: 'vol_%Y-%m-%d_%H-%M-%S.h5'
+vp:
+    dir: /Users/rijaf/Desktop/RADAR/biorad_vp/outputs
+class:
+    dir: /Users/rijaf/Desktop/RADAR/classification/outputs

@@ -14,3 +14,4 @@ xarray
 rasterio
 odc-geo
 Markdown
+rpy2
