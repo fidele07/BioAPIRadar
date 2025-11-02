@@ -8,9 +8,9 @@ DATABASE_HOST = ""
 CSRF_ENABLED = True
 # Use a secure, unique and absolutely secret key for
 # signing the data.
-CSRF_SESSION_KEY = "t544G%Mr8uI$Nvjm0jDf!clC1?TCxANz"
+CSRF_SESSION_KEY = ""
 # Secret key for signing cookies
-SECRET_KEY = "fFS5IqCW3JKjv1JiiB5NPsozoLEX0wj8"
+SECRET_KEY = ""
 
 # 
 R_HOME = "/usr/lib/R"
