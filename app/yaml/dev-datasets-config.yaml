@@ -1,13 +1,28 @@
 radar:
-    dir: /Users/rijaf/Desktop/RADAR/DATA/ODIM_H5
-    format_dir: '%Y%m%d'
-    format_file: 'vol_%Y-%m-%d_%H-%M-%S.h5'
-vp:
-    dir: /Users/rijaf/Desktop/RADAR/biorad_vp/outputs
+    polar:
+        dir: /home/radar/DATA/ODIM_H5
+        format_dir: '%Y-%m-%d'
+        format_file: 'vol_%Y-%m-%d_%H-%M-%S.h5'
+        pattern: 'vol_*.h5'
+    grid:
+        dir: /home/radar/DATA/GRID
+        format_dir: '%Y%m%d'
+        format_file: 'grid_%Y%m%d%H%M%S.nc'
+        pattern: 'grid_*.nc'
+vertical:
+    vp:
+        dir: /home/radar/biorad_vp/outputs/vp
+        format_dir: '%Y-%m-%d'
+        format_file: 'vp_%Y%m%d%H%M%S.csv'
+        pattern: 'vp_.+\\.csv$'
     sevip:
+        dir: /home/radar/biorad_vp/outputs/vid
+        format_dir: '%Y-%m-%d'
+        format_file: 'vid_%Y%m%d%H%M%S.nc'
+        pattern: 'vid_*.nc'
         missval: -99999
         lon: lon
         lat: lat
         time: time
 class:
-    dir: /Users/rijaf/Desktop/RADAR/classification/outputs
+    dir: /home/radar/classification/outputs

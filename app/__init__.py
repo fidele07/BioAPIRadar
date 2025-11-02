@@ -1,12 +1,15 @@
 
-### put in BioAPIRadar.py, before app import
+### put in BioAPIRadar.py (uwsgi.py), before app import
 import os
 import sys
+import tempfile
 
 os.environ['RPY2_CFFI_MODE'] = 'ABI'
 rm_mod = [mod for mod in sys.modules if mod.startswith('rpy2')]
 for mod in rm_mod:
 	del sys.modules[mod] 
+
+os.environ['MPLCONFIGDIR'] = tempfile.mkdtemp()
 
 ### 
 from flask import Flask
@@ -18,9 +21,7 @@ CORS(app)
 
 ###
 import config
-import tempfile
 
-os.environ['MPLCONFIGDIR'] = tempfile.mkdtemp()
 # os.environ['R_HOME'] = config.R_HOME
 # os.environ['R_LIBS_SITE'] = config.R_LIBS_SITE
 

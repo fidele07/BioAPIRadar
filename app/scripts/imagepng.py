@@ -13,7 +13,11 @@ def create_imagePng(data,
                     breaks=None,
                     colors=None,
                     color_name='rainbow'):
-    lon, lat = np.meshgrid(data['lon'], data['lat'])
+    if len(data['lon'].shape) == 1:
+        lon, lat = np.meshgrid(data['lon'], data['lat'])
+    else:
+        lon = data['lon']
+        lat = data['lat']
     data = np.squeeze(data['data'])
 
     if hasattr(data, 'mask'):
@@ -32,12 +36,15 @@ def create_imagePng(data,
         else:
             breaks = pretty(zmin, zmax, 20)
 
+    nkol = len(breaks) - 1
     if colors is None:
-        nkol = len(breaks) - 1
         listedCmap = plt.get_cmap(color_name, nkol)
         colors = [None] * nkol
         for j in range(nkol):
             colors[j] = mcolors.to_hex(listedCmap(j))
+    else:
+        colors_fun = colorRampPalette(colors)
+        colors = colors_fun(nkol)
 
     ###### map
     cmap = mcolors.ListedColormap(colors)
