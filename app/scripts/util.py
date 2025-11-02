@@ -177,6 +177,26 @@ def _nicenumber(x, round):
 
     return nf * 10.0 ** exp
 
+def get_data_dates_dir(data_info):
+    dates_dir = data_info['dir']
+    dates_dir = [os.path.join(dates_dir, d) for d in os.listdir(dates_dir)]
+    if len(dates_dir) == 0:
+        return None
+    dates_dir = [os.path.basename(d) for d in dates_dir if os.path.isdir(d)]
+    if len(dates_dir) == 0:
+        return None
+    tmp_path = []
+    for d in dates_dir:
+        try:
+            tmp = datetime.strptime(d, data_info['format_dir'])
+            tmp_path += [d]
+        except:
+            continue
+    if len(tmp_path) == 0:
+        return None
+
+    return tmp_path
+
 def get_data_file_path(data_info, time_str):
     format_time = '%Y-%m-%d %H:%M:%S'
     time_req = datetime.strptime(time_str, format_time)
@@ -190,3 +210,38 @@ def get_data_file_path(data_info, time_str):
     date = min(date_files, key=lambda dt: abs(dt - time_req))
     file = date.strftime(data_info['format_file'])
     return os.path.join(data_dir, file)
+
+def get_data_files_list(data_info, start_time, end_time):
+    format_time = '%Y-%m-%d %H:%M:%S'
+    start = datetime.strptime(start_time, format_time)
+    end = datetime.strptime(end_time, format_time)
+    start_date = start.date()
+    end_date = end.date()
+
+    dates_dir = get_data_dates_dir(data_info)
+    if dates_dir is None:
+        return None
+    dt_dir = [datetime.strptime(d, data_info['format_dir']) for d in dates_dir]
+    dt_dir = [d.date() for d in  dt_dir]
+    it = [d >= start_date and d <= end_date for d in dt_dir]
+    if not any(it):
+        return None
+    dates_dir = [dates_dir[i] for i, j in enumerate(it) if j]
+
+    list_out = []
+    for d in dates_dir:
+        data_dir = os.path.join(data_info['dir'], d)
+        data_files = glob.glob(f'{data_dir}/{data_info['pattern']}')
+        if len(data_files) == 0:
+            continue
+        data_files = [os.path.basename(p) for p in data_files]
+        date_files = [datetime.strptime(f, data_info['format_file']) for f in data_files]
+        it = [t >= start and t <= end for t in date_files]
+        if not any(it):
+            continue
+        data_files = [data_files[i] for i, j in enumerate(it) if j]
+        list_out += [{'dir': d, 'files': data_files}]
+    if len(list_out) == 0:
+        return None
+
+    return list_out

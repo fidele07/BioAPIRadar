@@ -4,7 +4,8 @@ from datetime import datetime
 from app.scripts._global import GLOBAL_CONFIG
 from app.scripts.util import (
             response_download_error,
-            response_download_json
+            response_download_json,
+            get_data_dates_dir
         )
 import pyart
 
@@ -22,33 +23,15 @@ def get_field_info(field):
 
 def get_elevation_angles(params):
     polar_info = GLOBAL_CONFIG['radar']['polar']
-    dates_dir = polar_info['dir']
-    tmp_path = [os.path.join(dates_dir, d) for d in os.listdir(dates_dir)]
-
-    if len(tmp_path) == 0:
-        msg = 'No data found.'
-        return response_download_error(
-                msg, 'elevation_angles', 422
-            )
-
-    dates_dir = [os.path.basename(d) for d in tmp_path if os.path.isdir(d)]
-
-    tmp_path = []
-    for d in dates_dir:
-        try:
-            tmp = datetime.strptime(d, polar_info['format_dir'])
-            tmp_path += [d]
-        except:
-            continue
-
-    if len(tmp_path) == 0:
+    dates_dir = get_data_dates_dir(polar_info)
+    if dates_dir is None:
         msg = 'No data found.'
         return response_download_error(
                 msg, 'elevation_angles', 422
             )
 
     first_file = []
-    for d in tmp_path:
+    for d in dates_dir:
         data_dir = os.path.join(polar_info['dir'], d)
         data_files = glob.glob(f'{data_dir}/{polar_info['pattern']}')
         if len(data_files) > 0:

@@ -26,3 +26,9 @@ vertical:
         time: time
 class:
     dir: /home/radar/classification/outputs
+    format_dir: '%Y%m%d'
+    format_file: 'class_%Y%m%d%H%M%S.nc'
+    pattern: 'class_*.nc'
+models:
+    dir: /home/radar/classification/models
+    job: MODEL_RFOREST.joblib
