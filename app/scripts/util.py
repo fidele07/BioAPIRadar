@@ -57,17 +57,20 @@ def response_download_error(message, filename, code=422):
 def response_download_json(data, params, filename):
     filename = f'{filename}.json'
     mimetype = 'application/json'
+    return response_download_file(
+            data, filename, mimetype
+        )
 
-    if params['httpMethod'] == 'POST':
-        return json.dumps(
-                {'status': 0, 'data': data,
-                 'filename': filename,
-                 'mimetype': mimetype}
-            )
-    else:
-        return response_download_file(
-                data, filename, mimetype
-            )
+    # if params['httpMethod'] == 'POST':
+    #     # return json.dumps(
+    #     #         {'status': 0, 'data': data,
+    #     #          'filename': filename,
+    #     #          'mimetype': mimetype}
+    #     #     )
+    # else:
+    #     return response_download_file(
+    #             data, filename, mimetype
+    #         )
 
 def post_get_request():
     if request.method == 'GET':
