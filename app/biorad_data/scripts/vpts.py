@@ -43,5 +43,5 @@ def _download_vp_data(params, vp_fun, vp_file):
                 pyobj['message'], vp_file, 422
             )
 
-    return response_download_json(pyobj, params, vp_file)
+    return response_download_json(pyobj['data'], params, vp_file)
 

@@ -37,7 +37,10 @@ def read_binary_file(filename):
     return buf
 
 def response_download_file(data, filename, mimetype):
-    response = make_response(data, 200)
+    response = make_response(
+            jsonify({'status': 0, 'data': data}),
+            200
+         )
     response.mimetype = mimetype
     response.headers['Content-Disposition'] = f'attachment; filename={filename}'
     return response
