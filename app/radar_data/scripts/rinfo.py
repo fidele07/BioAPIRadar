@@ -51,5 +51,5 @@ def get_elevation_angles(params):
         )
     elv_angles = radar.fixed_angle['data'].tolist()
     return response_download_json(
-                elv_angles, params, 'elevation_angles'
+                elv_angles, 'elevation_angles'
             )

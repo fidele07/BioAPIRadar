@@ -54,23 +54,12 @@ def response_download_error(message, filename, code=422):
     response.headers['Content-Disposition'] = f'attachment; filename={filename}.json'
     return response
 
-def response_download_json(data, params, filename):
+def response_download_json(data, filename):
     filename = f'{filename}.json'
     mimetype = 'application/json'
     return response_download_file(
             data, filename, mimetype
         )
-
-    # if params['httpMethod'] == 'POST':
-    #     # return json.dumps(
-    #     #         {'status': 0, 'data': data,
-    #     #          'filename': filename,
-    #     #          'mimetype': mimetype}
-    #     #     )
-    # else:
-    #     return response_download_file(
-    #             data, filename, mimetype
-    #         )
 
 def post_get_request():
     if request.method == 'GET':
@@ -81,43 +70,17 @@ def post_get_request():
 
 def response_download_data(callback):
     params = post_get_request()
-
-    # check_user = checkUserDataAPIKey(params, request)
-    # if check_user['status'] == -1:
-    #     if request.method == 'GET':
-    #         return make_response(
-    #                 jsonify({'message': check_user['message']}),
-    #                 check_user['code']
-    #             )
-    #     else:
-    #         return json.dumps(check_user)
-
-    # check_params = checkParamsRequest(params)
-    # if check_params['status'] == -1:
-    #     if request.method == 'GET':
-    #         return make_response(
-    #                 jsonify({'message': check_params['message']}),
-    #                 400
-    #             )
-    #     else:
-    #         check_params['code'] = 400
-    #         return json.dumps(check_params)
-
     try:
         # params = check_params['params']
         # params['user'] = check_user['user']
-        params['httpMethod'] = request.method
         return callback(params)
     except Exception as e:
-        if request.method == 'GET':
-            return make_response(
-                    jsonify({'message': str(e)}),
-                    500
-                )
-        else:
-            return json.dumps(
-                    {'status': -1, 'message': str(e)}
-                )
+        response = make_response(
+                jsonify({'status': -1, 'message': str(e)}),
+                500
+            )
+        response.mimetype = 'application/json'
+        return response
 
 @contextlib.contextmanager
 def suppress_stdout():

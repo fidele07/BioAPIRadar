@@ -57,4 +57,4 @@ def download_polar(params):
                     'units': param_info['units'],
                     'type': params['type']
                 }
-    return response_download_json(img_obj, params, 'polar_data')
+    return response_download_json(img_obj, 'polar_data')

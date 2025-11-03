@@ -51,4 +51,4 @@ def download_grid(params):
                     'units': param_info['units'],
                     'type': params['type']
                 }
-    return response_download_json(img_obj, params, 'grid_data')
+    return response_download_json(img_obj, 'grid_data')

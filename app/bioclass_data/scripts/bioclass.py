@@ -57,7 +57,7 @@ def download_bioclass(params):
                     'name': param_info['name'],
                     'class': params['class']
                 }
-    return response_download_json(out, params, 'class_data')
+    return response_download_json(out, 'class_data')
 
 def get_class_info(field):
     radar_fields = [

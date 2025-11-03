@@ -26,4 +26,4 @@ def download_sevip(params):
                     'time': data['time'].strftime('%Y-%m-%d %H:%M:%S'),
                     'name': data['name'], 'units': data['units']
                 }
-    return response_download_json(img_obj, params, 'sevip_data')
+    return response_download_json(img_obj, 'sevip_data')
