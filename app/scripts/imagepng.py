@@ -93,3 +93,37 @@ def create_imagePng(data,
     plt.close('all')
 
     return {'data': img_out, 'ckeys': ckeys}
+
+def class_imagePng(data, color_0='red', color_1='blue'):
+    if len(data['lon'].shape) == 1:
+        lon, lat = np.meshgrid(data['lon'], data['lat'])
+    else:
+        lon = data['lon']
+        lat = data['lat']
+    data = np.squeeze(data['data'])
+
+    cmap = mcolors.ListedColormap([color_0, color_1])
+    norm = mcolors.BoundaryNorm([0, 1], cmap.N)
+
+    fig = plt.figure()
+    ax = plt.axes([0, 0, 1, 1])
+    pm = ax.pcolormesh(lon, lat, data,
+                       vmin=0, vmax=1,
+                       shading='nearest')
+    pm.set_cmap(cmap)
+    pm.set_norm(norm)
+    bbox = plt.axis('off')
+    bounds = [[bbox[3].item(), bbox[0].item()],
+              [bbox[2].item(), bbox[1].item()]]
+
+    img = io.BytesIO()
+    plt.savefig(img, format='png',
+                bbox_inches=None,
+                transparent=True)
+    img.seek(0)
+    img_png = base64.b64encode(img.getvalue()).decode()
+    img_png = 'data:image/png;base64,' + img_png
+    img_out = {'png': img_png, 'bounds': bounds}
+    plt.close('all')
+
+    return img_out

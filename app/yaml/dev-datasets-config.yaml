@@ -14,7 +14,7 @@ vertical:
         dir: /home/radar/biorad_vp/outputs/vp
         format_dir: '%Y-%m-%d'
         format_file: 'vp_%Y%m%d%H%M%S.csv'
-        pattern: 'vp_.+\\.csv$'
+        pattern: 'vp_.+\.csv$'
     sevip:
         dir: /home/radar/biorad_vp/outputs/vid
         format_dir: '%Y-%m-%d'
