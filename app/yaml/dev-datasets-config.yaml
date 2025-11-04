@@ -32,3 +32,56 @@ class:
 models:
     dir: /home/radar/classification/models
     job: MODEL_RFOREST.joblib
+geojson:
+    dir: /home/radar/geojsons
+    administrative:
+        dir: administrative_boundaries
+        json:
+            country:
+                file: rwanda_country.json
+                name: Country
+                attr_id: GID_0
+                attr_name: COUNTRY
+            province:
+                file: rwanda_province.json
+                name: Province
+                attr_id: GID_1
+                attr_name: NAME_1
+            district:
+                file: rwanda_district.json
+                name: District
+                attr_id: GID_2
+                attr_name: NAME_2
+            sector:
+                file: rwanda_sector.json
+                name: Sector
+                attr_id: GID_3
+                attr_name: NAME_3
+            cell:
+                file: rwanda_cell.json
+                name: Cell
+                attr_id: GID_4
+                attr_name: NAME_4
+            village:
+                file: rwanda_village.json
+                name: Village
+                attr_id: GID_5
+                attr_name: NAME_5
+    special_zones:
+        dir: natural_boundaries
+        json:
+            protected_areas:
+                file: protected_areas.geojson
+                name: Protected Areas
+                attr_id: objectid_1
+                attr_name: areaname
+            wetland_zones:
+                file: wetland.geojson
+                name: Wetland Areas
+                attr_id: objectid
+                attr_name: noms
+            airports:
+                file: rwa_airports.geojson
+                name: Airport Location
+                attr_id: osm_id
+                attr_name: name

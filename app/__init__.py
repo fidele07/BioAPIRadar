@@ -1,5 +1,3 @@
-
-### put in BioAPIRadar.py (uwsgi.py), before app import
 import os
 import sys
 import tempfile
@@ -7,7 +5,7 @@ import tempfile
 os.environ['RPY2_CFFI_MODE'] = 'ABI'
 rm_mod = [mod for mod in sys.modules if mod.startswith('rpy2')]
 for mod in rm_mod:
-	del sys.modules[mod] 
+    del sys.modules[mod] 
 
 os.environ['MPLCONFIGDIR'] = tempfile.mkdtemp()
 
@@ -22,9 +20,11 @@ CORS(app)
 ###
 import config
 
-# os.environ['R_HOME'] = config.R_HOME
-# os.environ['R_LIBS_SITE'] = config.R_LIBS_SITE
-
+from app.scripts.util import response_download_data
+from app.scripts.geojson import (
+                            get_map_geojson,
+                            get_attr_geojson
+                        )
 ### 
 from app.biorad_data.index import biorad_data
 from app.radar_data.index import radar_data
@@ -33,4 +33,13 @@ from app.bioclass_data.index import bioclass_data
 app.register_blueprint(biorad_data)
 app.register_blueprint(radar_data)
 app.register_blueprint(bioclass_data)
+
+### 
+@app.route('/data_geojson', methods=['GET', 'POST'])
+def data_geojson():
+    return response_download_data(get_map_geojson)
+
+@app.route('/attr_geojson', methods=['GET', 'POST'])
+def attr_geojson():
+    return response_download_data(get_attr_geojson)
 

@@ -11,7 +11,3 @@ CSRF_ENABLED = True
 CSRF_SESSION_KEY = ""
 # Secret key for signing cookies
 SECRET_KEY = ""
-
-# 
-R_HOME = "/usr/lib/R"
-R_LIBS_SITE = "/usr/lib/R/library"
