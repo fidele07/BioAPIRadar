@@ -18,3 +18,4 @@ rpy2
 matplotlib
 scipy
 arm_pyart
+geopy
