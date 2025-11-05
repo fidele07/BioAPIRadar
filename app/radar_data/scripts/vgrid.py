@@ -65,14 +65,6 @@ def vcross_section_grid(params):
     time = cftime2datetime(time)
     time = time.strftime('%Y-%m-%d %H:%M:%S')
 
-    # dist in degrees
-    # hp = np.hypot(
-    #         xl[-1] - xl[0],
-    #         yl[-1] - yl[0]
-    #     )
-    # dist = np.linspace(0, hp, len(xl))
-
-    # dist in km
     dist = [0]
     for i in range(1, len(xl)):
         p1 = (yl[i - 1], xl[i - 1])
