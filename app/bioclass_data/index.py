@@ -5,8 +5,11 @@ from app.scripts.util import (
         response_download_data,
         post_get_request
     )
-from .scripts.bioclass import download_bioclass
-from .scripts.vcross_sec import get_vcross_bioclass
+from .scripts import (
+        download_bioclass,
+        get_vcross_bioclass,
+        anime_gif_bioclass
+    )
 
 bioclass_data = Blueprint('bioclass_data', __name__)
 
@@ -27,3 +30,11 @@ def vcross_section_bioclass():
     """
     return response_download_data(get_vcross_bioclass)
 
+@bioclass_data.route('/get_bioclass_gif', methods=['GET', 'POST'])
+def get_bioclass_gif():
+    """
+    GIFs
+    Biological-Meteorological Classification.
+    Bird-Insect Classification.
+    """
+    return response_download_data(anime_gif_bioclass)

@@ -2,12 +2,13 @@ from flask import Blueprint
 from flask import current_app as app
 
 from app.scripts.util import response_download_data
-from .scripts.vpts import (
-                    download_vp,
-                    download_vpts,
-                    download_vtip
-                )
-from .scripts.sevip import download_sevip
+from .scripts import (
+            download_vp,
+            download_vpts,
+            download_vtip,
+            download_sevip,
+            anime_gif_sevip
+        )
 
 biorad_data = Blueprint('biorad_data', __name__)
 
@@ -31,3 +32,7 @@ def get_sevip():
     """Spatial estimates of vertically integrated parameters."""
     return response_download_data(download_sevip)
 
+@biorad_data.route('/get_sevip_gif', methods=['GET', 'POST'])
+def get_sevip_gif():
+    """GIF Spatial estimates of vertically integrated parameters."""
+    return response_download_data(anime_gif_sevip)

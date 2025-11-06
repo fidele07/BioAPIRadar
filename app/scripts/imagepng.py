@@ -63,13 +63,13 @@ def create_imagePng(data,
     bounds = [[bbox[3].item(), bbox[0].item()],
               [bbox[2].item(), bbox[1].item()]]
 
-    img = io.BytesIO()
-    plt.savefig(img, format='png',
+    img_buf = io.BytesIO()
+    plt.savefig(img_buf, format='png',
                 bbox_inches=None,
                 transparent=True)
-    img.seek(0)
-    img_png = base64.b64encode(img.getvalue()).decode()
-    img_png = 'data:image/png;base64,' + img_png
+    img_buf.seek(0)
+    img_png = base64.b64encode(img_buf.getvalue()).decode()
+    img_png = f'data:image/png;base64,{img_png}'
     img_out = {'png': img_png, 'bounds': bounds}
     plt.close('all')
 
@@ -80,21 +80,26 @@ def create_imagePng(data,
     norm = mcolors.BoundaryNorm(breaks, cmap.N)
 
     fig, ax = plt.subplots(figsize=(8, 1), layout='constrained')
-    fig.colorbar(mpl.cm.ScalarMappable(norm=norm, cmap=cmap),
-                 cax=ax, extendrect=True, orientation='horizontal')
+    fig.colorbar(
+            mpl.cm.ScalarMappable(norm=norm, cmap=cmap),
+            cax=ax, extendrect=True,
+            orientation='horizontal'
+        )
 
     cbar = io.BytesIO()
-    plt.savefig(cbar, format='png',
-                bbox_inches=None,
-                transparent=True)
+    plt.savefig(
+            cbar, format='png',
+            bbox_inches=None,
+            transparent=True
+        )
     cbar.seek(0)
     cbar_png = base64.b64encode(cbar.getvalue()).decode()
-    ckeys['png'] = 'data:image/png;base64,' + cbar_png
+    ckeys['png'] = f'data:image/png;base64,{cbar_png}'
     plt.close('all')
 
     return {'data': img_out, 'ckeys': ckeys}
 
-def class_imagePng(data, color_0='red', color_1='blue'):
+def bioclass_imagePng(data, color_0='red', color_1='blue'):
     if len(data['lon'].shape) == 1:
         lon, lat = np.meshgrid(data['lon'], data['lat'])
     else:
@@ -116,13 +121,13 @@ def class_imagePng(data, color_0='red', color_1='blue'):
     bounds = [[bbox[3].item(), bbox[0].item()],
               [bbox[2].item(), bbox[1].item()]]
 
-    img = io.BytesIO()
-    plt.savefig(img, format='png',
+    img_buf = io.BytesIO()
+    plt.savefig(img_buf, format='png',
                 bbox_inches=None,
                 transparent=True)
-    img.seek(0)
-    img_png = base64.b64encode(img.getvalue()).decode()
-    img_png = 'data:image/png;base64,' + img_png
+    img_buf.seek(0)
+    img_png = base64.b64encode(img_buf.getvalue()).decode()
+    img_png = f'data:image/png;base64,{img_png}'
     img_out = {'png': img_png, 'bounds': bounds}
     plt.close('all')
 

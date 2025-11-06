@@ -8,7 +8,7 @@ from app.scripts.util import (
         response_download_error
     )
 from app.scripts._global import GLOBAL_CONFIG
-from app.scripts.imagepng import class_imagePng
+from app.scripts.imagepng import bioclass_imagePng
 import pyart
 
 def download_bioclass(params):
@@ -17,7 +17,7 @@ def download_bioclass(params):
     if file_path is None:
         msg = 'No data found.'
         return response_download_error(
-                msg, 'grid_cartesian', 422
+                msg, 'bio_grid_cartesian', 422
             )
 
     grid = pyart.io.read_grid(file_path)
@@ -29,7 +29,7 @@ def download_bioclass(params):
     iz = np.argmin(np.abs(z_crds - params['height']))
     data = data[iz, :, :]
     data = {'lon': lon, 'lat': lat, 'data': data}
-    img_obj = class_imagePng(data,
+    img_obj = bioclass_imagePng(data,
                              color_0=params['color_0'],
                              color_1=params['color_1'])
     out = {'data': img_obj}

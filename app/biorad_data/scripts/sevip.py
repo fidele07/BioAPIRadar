@@ -1,5 +1,4 @@
 import os
-import json
 from app.scripts.netcdf import read_netcdf_nc
 from app.scripts.util import (
         get_data_file_path,
