@@ -1,11 +1,10 @@
 import numpy as np
 import io
 import base64
-from tempfile import NamedTemporaryFile as tmpFile
+from PIL import Image
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 import matplotlib.colors as mcolors
-import matplotlib.animation as animation
 from datetime import datetime
 from .util import pretty
 from .colorbar import format_ColorScale, colorRampPalette
@@ -55,29 +54,6 @@ def create_animeGif(data,
     vmin = breaks[0]
     vmax = breaks[-1]
 
-    fig = plt.figure(dpi=dpi)
-    ax = plt.axes([0, 0, 1, 1])
-    mesh = ax.pcolormesh(
-                lon, lat, data['frames'][0],
-                vmin=vmin, vmax=vmax,
-                shading='nearest'
-            )
-    mesh.set_cmap(cmap)
-    mesh.set_norm(norm)
-    bbox = plt.axis('off')
-    bounds = [[bbox[3].item(), bbox[0].item()],
-              [bbox[2].item(), bbox[1].item()]]
-    txt = ax.text(
-            0.01, 0.985, '',
-            transform=ax.transAxes,
-            ha='left', va='top',
-            fontsize='xx-small', color='white',
-            bbox=dict(
-                    facecolor=(0, 0, 0, 0.35),
-                    edgecolor='none', pad=2
-                )
-        )
-
     def format_time(t):
         if isinstance(t, (np.datetime64, )):
             t = t.astype('datetime64[s]').astype(object)
@@ -85,39 +61,60 @@ def create_animeGif(data,
             return t.strftime("%Y-%m-%d %H:%M")
         return str(t)
 
-    def update(i):
-        mesh.set_array(data['frames'][i].ravel())
-        txt.set_text(format_time(data['times'][i]))
-        return (mesh, txt)
+    imgs = []
+    bounds = None
 
-    anim = animation.FuncAnimation(
-                fig, update,
-                frames=len(data['frames']),
-                blit=True, interval=400
+    for i in range(len(data['frames'])):
+        fig = plt.figure(dpi=dpi)
+        ax = plt.axes([0, 0, 1, 1])
+        mesh = ax.pcolormesh(
+                    lon, lat, data['frames'][i],
+                    vmin=vmin, vmax=vmax,
+                    shading='nearest'
+                )
+        mesh.set_cmap(cmap)
+        mesh.set_norm(norm)
+        bbox = plt.axis('off')
+        if bounds is None:
+            bounds = [[bbox[3].item(), bbox[0].item()],
+                      [bbox[2].item(), bbox[1].item()]]
+        txt = ax.text(
+                0.01, 0.985,
+                format_time(data['times'][i]),
+                transform=ax.transAxes,
+                ha='left', va='top',
+                fontsize=8, color='white',
+                bbox=dict(
+                        facecolor=(0, 0, 0, 0.35),
+                        edgecolor='none', pad=2
+                    )
+            )
+        img_buf = io.BytesIO()
+        plt.savefig(img_buf, format='png',
+                    bbox_inches=None,
+                    transparent=True)
+        plt.close(fig)
+        img_buf.seek(0)
+        imgs.append(
+                Image.open(img_buf).convert('RGBA')
             )
 
-    with tmpFile(suffix='.gif', delete=False) as f:
-        gif_file = f.name
-    writer = animation.PillowWriter(
-                fps=fps, metadata={'loop': 0}
-            )
-    anim.save(
-        gif_file,
-        writer=writer,
-        dpi=dpi,
-        savefig_kwargs={
-            'transparent': True,
-            'facecolor': 'none',
-            'pad_inches': 0
-        },
+    buf_gif = io.BytesIO()
+    imgs[0].save(
+        buf_gif,
+        format='GIF',
+        save_all=True,
+        append_images=imgs[1:],
+        duration=400,
+        loop=0,
+        transparency=0,
+        disposal=2,
     )
-    with open(gif_file, 'rb') as f:
-        gif_bytes = f.read()
+    buf_gif.seek(0)
 
-    img_gif = base64.b64encode(gif_bytes).decode('utf-8')
+    img_gif = base64.b64encode(buf_gif.read()).decode('utf-8')
     img_gif = f'data:image/gif;base64,{img_gif}'
     img_out = {'gif': img_gif, 'bounds': bounds}
-    plt.close('all')
 
     ##### colorbar
     ckeys = format_ColorScale(breaks, colors)
@@ -138,10 +135,10 @@ def create_animeGif(data,
             bbox_inches=None,
             transparent=True
         )
+    plt.close(fig)
     cbar.seek(0)
     cbar_png = base64.b64encode(cbar.getvalue()).decode()
     ckeys['png'] = f'data:image/png;base64,{cbar_png}'
-    plt.close('all')
 
     return {'data': img_out, 'ckeys': ckeys}
 
@@ -158,28 +155,6 @@ def bioclass_animeGif(data,
     cmap = mcolors.ListedColormap([color_0, color_1])
     norm = mcolors.BoundaryNorm([0, 1], cmap.N)
 
-    fig = plt.figure()
-    ax = plt.axes([0, 0, 1, 1])
-    mesh = ax.pcolormesh(
-            lon, lat, data['frames'][0],
-            vmin=0, vmax=1, shading='nearest'
-        )
-    mesh.set_cmap(cmap)
-    mesh.set_norm(norm)
-    bbox = plt.axis('off')
-    bounds = [[bbox[3].item(), bbox[0].item()],
-              [bbox[2].item(), bbox[1].item()]]
-    txt = ax.text(
-            0.02, 0.95, '',
-            transform=ax.transAxes,
-            # ha='left', va='top',
-            fontsize='xx-small', color='white',
-            bbox=dict(
-                    facecolor=(0, 0, 0, 0.4),
-                    edgecolor='none', pad=2
-                )
-        )
-
     def format_time(t):
         if isinstance(t, (np.datetime64, )):
             t = t.astype('datetime64[s]').astype(object)
@@ -187,63 +162,58 @@ def bioclass_animeGif(data,
             return t.strftime("%Y-%m-%d %H:%M")
         return str(t)
 
-    def init():
-        mesh.set_array(data['frames'][0].ravel())
-        txt.set_text(format_time(data['times'][0]))
-        return (mesh, txt)
+    imgs = []
+    bounds = None
 
-    # def update(i):
-    #     print(i)
-    #     # global mesh
-    #     mesh.remove()
-    #     mesh = ax.pcolormesh(
-    #             lon, lat, data['frames'][i],
-    #             vmin=0, vmax=1, shading='nearest'
-    #         )
-    #     mesh.set_cmap(cmap)
-    #     mesh.set_norm(norm)
-    #     txt.set_text(format_time(data['times'][i]))
-    #     return (mesh, txt)
-
-    def update(i):
-        # print(i)
-        mesh.set_array(data['frames'][i].ravel())
-        txt.set_text(format_time(data['times'][i]))
-        return (mesh, txt)
-
-    anim = animation.FuncAnimation(
-                fig, update, init_func=init,
-                frames=len(data['frames']),
-                blit=True, interval=400
+    for i in range(len(data['frames'])):
+        fig = plt.figure()
+        ax = plt.axes([0, 0, 1, 1])
+        mesh = ax.pcolormesh(
+                lon, lat, data['frames'][i],
+                vmin=0, vmax=1, shading='nearest'
+            )
+        mesh.set_cmap(cmap)
+        mesh.set_norm(norm)
+        bbox = plt.axis('off')
+        if bounds is None:
+            bounds = [[bbox[3].item(), bbox[0].item()],
+                      [bbox[2].item(), bbox[1].item()]]
+        txt = ax.text(
+                0.02, 0.95, 
+                format_time(data['times'][i]),
+                transform=ax.transAxes,
+                ha='left', va='top',
+                fontsize=8, color='white',
+                bbox=dict(
+                        facecolor=(0, 0, 0, 0.4),
+                        edgecolor='none', pad=2
+                    )
+            )
+        img_buf = io.BytesIO()
+        plt.savefig(img_buf, format='png',
+                    bbox_inches=None,
+                    transparent=True)
+        plt.close(fig)
+        img_buf.seek(0)
+        imgs.append(
+                Image.open(img_buf).convert('RGBA')
             )
 
-    # anim = animation.FuncAnimation(
-    #             fig, update,
-    #             frames=len(data['frames']),
-    #             blit=False, interval=400
-    #         )
-
-    with tmpFile(suffix='.gif', delete=False) as f:
-        gif_file = f.name
-    writer = animation.PillowWriter(
-                fps=fps, metadata={'loop': 0}
-            )
-    anim.save(
-        gif_file,
-        writer=writer,
-        dpi=dpi,
-        savefig_kwargs={
-            'transparent': True,
-            'facecolor': 'none',
-            'pad_inches': 0
-        },
+    buf_gif = io.BytesIO()
+    imgs[0].save(
+        buf_gif,
+        format='GIF',
+        save_all=True,
+        append_images=imgs[1:],
+        duration=400,
+        loop=0,
+        transparency=0,
+        disposal=2,
     )
-    with open(gif_file, 'rb') as f:
-        gif_bytes = f.read()
+    buf_gif.seek(0)
 
-    img_gif = base64.b64encode(gif_bytes).decode('utf-8')
+    img_gif = base64.b64encode(buf_gif.read()).decode('utf-8')
     img_gif = f'data:image/gif;base64,{img_gif}'
     img_out = {'gif': img_gif, 'bounds': bounds}
-    plt.close('all')
 
     return img_out
