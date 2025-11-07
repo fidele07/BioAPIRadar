@@ -7,11 +7,13 @@ import json
 import glob
 import numpy as np
 import contextlib
+import base64
 from datetime import datetime
 from flask import (
             make_response,
             jsonify,
-            request
+            request,
+            Response
         )
 
 def load_yaml_file(file_path):
@@ -61,6 +63,30 @@ def response_download_json(data, filename):
     return response_download_file(
             data, filename, mimetype
         )
+
+def response_download_image(data, filename, ext):
+    filename = f'{filename}.{ext}'
+    if ext == 'jpg':
+        ext = 'jpeg'
+    mimetype = f'image/{ext}'
+    if request.method == 'POST':
+        return response_download_file(
+                data, filename, mimetype
+            )
+    else:
+        cd = f'attachment; filename={filename}'
+        return Response(
+                png_base64_binary(data),
+                mimetype=mimetype,
+                headers = {'Content-Type': mimetype,
+                           'Content-Disposition': cd}
+            )
+
+def png_base64_binary(png_base64):
+    ixc = png_base64.find(',')
+    png_data = png_base64[ixc + 1:]
+    bin_data = base64.b64decode(png_data)
+    return bin_data
 
 def post_get_request():
     if request.method == 'GET':

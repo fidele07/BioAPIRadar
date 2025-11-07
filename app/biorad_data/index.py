@@ -7,7 +7,9 @@ from .scripts import (
             download_vpts,
             download_vtip,
             download_sevip,
-            anime_gif_sevip
+            anime_gif_sevip,
+            get_vpts_image,
+            get_vtip_image
         )
 
 biorad_data = Blueprint('biorad_data', __name__)
@@ -36,3 +38,13 @@ def get_sevip():
 def get_sevip_gif():
     """GIF Spatial estimates of vertically integrated parameters."""
     return response_download_data(anime_gif_sevip)
+
+@biorad_data.route('/image_vpts', methods=['GET', 'POST'])
+def image_vpts():
+    """Plot vertical profiles time series."""
+    return response_download_data(get_vpts_image)
+
+@biorad_data.route('/image_vtip', methods=['GET', 'POST'])
+def image_vtip():
+    """Plot vertical and time integration of profiles."""
+    return response_download_data(get_vtip_image)
