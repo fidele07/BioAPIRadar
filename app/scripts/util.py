@@ -201,6 +201,8 @@ def get_data_file_path(data_info, time_str):
     if not os.path.isdir(data_dir):
         return None
     data_files = glob.glob(f'{data_dir}/{data_info['pattern']}')
+    if len(data_files) == 0:
+        return None
     data_files = [os.path.basename(p) for p in data_files]
     ## old
     # date_files = [datetime.strptime(f, data_info['format_file']) for f in data_files]

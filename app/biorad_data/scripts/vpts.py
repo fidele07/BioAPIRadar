@@ -13,27 +13,26 @@ from rpy2.robjects import conversion, default_converter
 
 biorad = importr('BioVPRadar')
 
-def download_vp(params):
-    return _download_vp_data(
+def get_vp_json(params):
+    return _get_vp_data(
                 params, 'get_vp', 'vp_data'
             )
 
-def download_vpts(params):
-    return _download_vp_data(
+def get_vpts_json(params):
+    return _get_vp_data(
                 params, 'get_vpts', 'vpts_data'
             )
 
-def download_vtip(params):
-    return _download_vp_data(
+def get_vtip_json(params):
+    return _get_vp_data(
                 params, 'get_vtip', 'vtip_data'
             )
 
-def _download_vp_data(params, vp_fun, vp_file):
-    vp_info = GLOBAL_CONFIG['vertical']['vp']
+def _get_vp_data(params, vp_fun, vp_file):
+    config_dir = GLOBAL_CONFIG['config_dir']
     with conversion.localconverter(default_converter):
-        vp_info = ListVector(vp_info)
         rparams = ListVector(params)
-        robj = robjects.r[vp_fun](vp_info, rparams)
+        robj = robjects.r[vp_fun](config_dir, rparams)
         pyobj = {key : robj.rx2(key)[0] for key in robj.names}
 
     if pyobj['status'] == -1:
@@ -46,11 +45,10 @@ def _download_vp_data(params, vp_fun, vp_file):
     return response_download_json(pyobj['data'], vp_file)
 
 def get_vpts_image(params):
-    vp_info = GLOBAL_CONFIG['vertical']['vp']
+    config_dir = GLOBAL_CONFIG['config_dir']
     with conversion.localconverter(default_converter):
-        vp_info = ListVector(vp_info)
         rparams = ListVector(params)
-        robj = biorad.get_vpts_image(vp_info, rparams)
+        robj = biorad.get_vpts_image(config_dir, rparams)
         pyobj = {key : robj.rx2(key)[0] for key in robj.names}
 
     if pyobj['status'] == -1:
@@ -62,11 +60,10 @@ def get_vpts_image(params):
             )
 
 def get_vtip_image(params):
-    vp_info = GLOBAL_CONFIG['vertical']['vp']
+    config_dir = GLOBAL_CONFIG['config_dir']
     with conversion.localconverter(default_converter):
-        vp_info = ListVector(vp_info)
         rparams = ListVector(params)
-        robj = biorad.get_vtip_image(vp_info, rparams)
+        robj = biorad.get_vtip_image(config_dir, rparams)
         pyobj = {key : robj.rx2(key)[0] for key in robj.names}
 
     if pyobj['status'] == -1:

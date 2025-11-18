@@ -8,7 +8,7 @@ from app.scripts.util import (
 from app.scripts._global import GLOBAL_CONFIG
 from app.scripts.imagepng import create_imagePng
 
-def download_sevip(params):
+def get_sevip_json(params):
     data_info = GLOBAL_CONFIG['vertical']['sevip']
     nc_path = get_data_file_path(data_info, params['time'])
     if nc_path is None:

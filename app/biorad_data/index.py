@@ -3,13 +3,14 @@ from flask import current_app as app
 
 from app.scripts.util import response_download_data
 from .scripts import (
-            download_vp,
-            download_vpts,
-            download_vtip,
-            download_sevip,
+            get_vp_json,
+            get_vpts_json,
+            get_vtip_json,
+            get_sevip_json,
             anime_gif_sevip,
             get_vpts_image,
-            get_vtip_image
+            get_vtip_image,
+            get_vp_time_range
         )
 
 biorad_data = Blueprint('biorad_data', __name__)
@@ -17,22 +18,22 @@ biorad_data = Blueprint('biorad_data', __name__)
 @biorad_data.route('/get_vp', methods=['GET', 'POST'])
 def get_vp():
     """Vertical profiles."""
-    return response_download_data(download_vp)
+    return response_download_data(get_vp_json)
 
 @biorad_data.route('/get_vpts', methods=['GET', 'POST'])
 def get_vpts():
     """Vertical profiles time series."""
-    return response_download_data(download_vpts)
+    return response_download_data(get_vpts_json)
 
 @biorad_data.route('/get_vtip', methods=['GET', 'POST'])
 def get_vtip():
     """Vertical and time integration of profiles."""
-    return response_download_data(download_vtip)
+    return response_download_data(get_vtip_json)
 
 @biorad_data.route('/get_sevip', methods=['GET', 'POST'])
 def get_sevip():
     """Spatial estimates of vertically integrated parameters."""
-    return response_download_data(download_sevip)
+    return response_download_data(get_sevip_json)
 
 @biorad_data.route('/get_sevip_gif', methods=['GET', 'POST'])
 def get_sevip_gif():
@@ -48,3 +49,8 @@ def image_vpts():
 def image_vtip():
     """Plot vertical and time integration of profiles."""
     return response_download_data(get_vtip_image)
+
+@biorad_data.route('/vp_temporal_coverage', methods=['GET', 'POST'])
+def vp_temporal_coverage():
+    """Temporal coverage for all vertical profiles products."""
+    return response_download_data(get_vp_time_range)

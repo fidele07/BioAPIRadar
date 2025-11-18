@@ -1,8 +1,5 @@
-# PostgreSQL Configuration
-DATABASE_USER = ""
-DATABASE_PASSWORD = ""
-DATABASE_DB = ""
-DATABASE_HOST = ""
+# Parent directory of BioAPIRadar
+BIORADAR_DIR = "/home/user/bioradar"
 
 # Enable protection against *Cross-site Request Forgery (CSRF)*
 CSRF_ENABLED = True
