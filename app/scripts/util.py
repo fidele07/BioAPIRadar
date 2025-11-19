@@ -9,6 +9,7 @@ import numpy as np
 import contextlib
 import base64
 from datetime import datetime
+import pytz
 from flask import (
             make_response,
             jsonify,
@@ -100,6 +101,7 @@ def response_download_data(callback):
     try:
         # params = check_params['params']
         # params['user'] = check_user['user']
+        params = convert_kigali_utc(params)
         return callback(params)
     except Exception as e:
         response = make_response(
@@ -108,6 +110,15 @@ def response_download_data(callback):
             )
         response.mimetype = 'application/json'
         return response
+
+def convert_kigali_utc(params):
+    if 'time' in params:
+        params['time'] = kigali2utc(params['time'])
+    if 'startTime' in params:
+        params['startTime'] = kigali2utc(params['startTime'])
+    if 'endTime' in params:
+        params['endTime'] = kigali2utc(params['endTime'])
+    return params
 
 @contextlib.contextmanager
 def suppress_stdout():
@@ -118,6 +129,14 @@ def suppress_stdout():
             yield
         finally:
             sys.stdout = old_stdout
+
+def kigali2utc(time):
+    frmt = '%Y-%m-%d %H:%M:%S'
+    kigali_t = datetime.strptime(time, frmt)
+    kigali_tz = pytz.timezone('Africa/Kigali')
+    kigali_dt = kigali_tz.localize(kigali_t)
+    utc_dt = kigali_dt.astimezone(pytz.utc)
+    return utc_dt.strftime(frmt)
 
 def cftime2datetime(time):
     return datetime(
