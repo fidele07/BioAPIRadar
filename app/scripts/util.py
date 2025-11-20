@@ -79,8 +79,8 @@ def response_download_image(data, filename, ext):
         return Response(
                 png_base64_binary(data),
                 mimetype=mimetype,
-                headers = {'Content-Type': mimetype,
-                           'Content-Disposition': cd}
+                headers={'Content-Type': mimetype,
+                         'Content-Disposition': cd}
             )
 
 def png_base64_binary(png_base64):

@@ -25,6 +25,8 @@ from app.scripts.geojson import (
                             get_map_geojson,
                             get_attr_geojson
                         )
+from app.scripts.vpproctime import get_vp_proctime_image
+
 ### 
 from app.biorad_data.index import biorad_data
 from app.radar_data.index import radar_data
@@ -43,3 +45,6 @@ def data_geojson():
 def attr_geojson():
     return response_download_data(get_attr_geojson)
 
+@app.route('/vp_proctime', methods=['GET', 'POST'])
+def vp_proctime():
+    return response_download_data(get_vp_proctime_image)
