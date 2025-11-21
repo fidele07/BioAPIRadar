@@ -8,6 +8,7 @@ from .scripts import (
             get_vtip_json,
             get_sevip_json,
             anime_gif_sevip,
+            get_vp_image,
             get_vpts_image,
             get_vtip_image,
             get_vp_time_range
@@ -39,6 +40,11 @@ def get_sevip():
 def get_sevip_gif():
     """GIF Spatial estimates of vertically integrated parameters."""
     return response_download_data(anime_gif_sevip)
+
+@biorad_data.route('/image_vp', methods=['GET', 'POST'])
+def image_vp():
+    """Plot vertical profiles."""
+    return response_download_data(get_vp_image)
 
 @biorad_data.route('/image_vpts', methods=['GET', 'POST'])
 def image_vpts():

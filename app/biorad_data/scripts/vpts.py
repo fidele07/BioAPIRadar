@@ -44,6 +44,21 @@ def _get_vp_data(params, vp_fun, vp_file):
 
     return response_download_json(pyobj['data'], vp_file)
 
+def get_vp_image(params):
+    config_dir = GLOBAL_CONFIG['config_dir']
+    with conversion.localconverter(default_converter):
+        rparams = ListVector(params)
+        robj = biorad.get_vp_image(config_dir, rparams)
+        pyobj = {key : robj.rx2(key)[0] for key in robj.names}
+
+    if pyobj['status'] == -1:
+        return response_download_error(
+                pyobj['message'], vp_file, 422
+            )
+    return response_download_image(
+                pyobj['data'], 'vp_image', 'png'
+            )
+
 def get_vpts_image(params):
     config_dir = GLOBAL_CONFIG['config_dir']
     with conversion.localconverter(default_converter):
