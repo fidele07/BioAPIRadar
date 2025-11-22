@@ -28,6 +28,21 @@ def get_vtip_json(params):
                 params, 'get_vtip', 'vtip_data'
             )
 
+def get_vp_image(params):
+    return _get_vp_image(
+                params, 'get_vp_image', 'vp_image'
+            )
+
+def get_vpts_image(params):
+    return _get_vp_image(
+                params, 'get_vpts_image', 'vpts_image'
+            )
+
+def get_vtip_image(params):
+    return _get_vp_image(
+                params, 'get_vtip_image', 'vtip_image'
+            )
+
 def _get_vp_data(params, vp_fun, vp_file):
     config_dir = GLOBAL_CONFIG['config_dir']
     with conversion.localconverter(default_converter):
@@ -44,11 +59,11 @@ def _get_vp_data(params, vp_fun, vp_file):
 
     return response_download_json(pyobj['data'], vp_file)
 
-def get_vp_image(params):
+def _get_vp_image(params, vp_fun, vp_file):
     config_dir = GLOBAL_CONFIG['config_dir']
     with conversion.localconverter(default_converter):
         rparams = ListVector(params)
-        robj = biorad.get_vp_image(config_dir, rparams)
+        robj = robjects.r[vp_fun](config_dir, rparams)
         pyobj = {key : robj.rx2(key)[0] for key in robj.names}
 
     if pyobj['status'] == -1:
@@ -56,35 +71,5 @@ def get_vp_image(params):
                 pyobj['message'], vp_file, 422
             )
     return response_download_image(
-                pyobj['data'], 'vp_image', 'png'
-            )
-
-def get_vpts_image(params):
-    config_dir = GLOBAL_CONFIG['config_dir']
-    with conversion.localconverter(default_converter):
-        rparams = ListVector(params)
-        robj = biorad.get_vpts_image(config_dir, rparams)
-        pyobj = {key : robj.rx2(key)[0] for key in robj.names}
-
-    if pyobj['status'] == -1:
-        return response_download_error(
-                pyobj['message'], vp_file, 422
-            )
-    return response_download_image(
-                pyobj['data'], 'vpts_image', 'png'
-            )
-
-def get_vtip_image(params):
-    config_dir = GLOBAL_CONFIG['config_dir']
-    with conversion.localconverter(default_converter):
-        rparams = ListVector(params)
-        robj = biorad.get_vtip_image(config_dir, rparams)
-        pyobj = {key : robj.rx2(key)[0] for key in robj.names}
-
-    if pyobj['status'] == -1:
-        return response_download_error(
-                pyobj['message'], vp_file, 422
-            )
-    return response_download_image(
-                pyobj['data'], 'vtip_image', 'png'
+                pyobj['data'], vp_file, 'png'
             )
