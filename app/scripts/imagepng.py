@@ -132,3 +132,27 @@ def bioclass_imagePng(data, color_0='red', color_1='blue'):
     plt.close('all')
 
     return img_out
+
+def vcross_imagePng(vcross, color_name='rainbow'):
+    dist = np.array(vcross['xaxis']['values'], dtype=float)
+    hgt = np.array(vcross['yaxis']['values'], dtype=float)
+    data = np.array(vcross['vcross'], dtype=float)
+
+    fig, ax = plt.subplots(figsize=(10, 8))
+    cs = ax.contourf(dist, hgt, data, levels=20, cmap=color_name)
+    cbar = plt.colorbar(cs, ax=ax)
+    cbar.set_label(f"{vcross['info']['name']} ({vcross['info']['units']})")
+    ax.set_xlabel(vcross['xaxis']['label'])
+    ax.set_ylabel(vcross['yaxis']['label'])
+    ax.set_title(f"Vertical cross section of {vcross['info']['name']}")
+
+    img_buf = io.BytesIO()
+    plt.savefig(img_buf, format='png',
+                bbox_inches=None,
+                transparent=True)
+    img_buf.seek(0)
+    img_png = base64.b64encode(img_buf.getvalue()).decode()
+    img_png = f'data:image/png;base64,{img_png}'
+    plt.close('all')
+
+    return img_png

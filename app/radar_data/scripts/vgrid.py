@@ -104,3 +104,6 @@ def vcross_section_grid(params):
                 }
 
     return response_download_json(out, 'vertical_cross_sec_grid')
+
+def image_vcross_section_grid(params):
+    return {'data': "data:image/png;base64,iVBORw0KGgo", 'status': 0}
