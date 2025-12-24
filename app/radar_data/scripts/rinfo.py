@@ -10,6 +10,8 @@ from app.scripts.util import (
 import xradar as xd
 from pyproj import CRS, Transformer
 from app.scripts.cdb import queryDB_json
+
+from BioModRadar import read_radar_data
 from BioModRadar import read_xradar_data
 
 def get_field_info(field):
@@ -39,16 +41,48 @@ def get_dtree_lat_lon_alt(ds):
     transformer = Transformer.from_crs(src_crs, trg_crs)
     return transformer.transform(ds.x, ds.y, ds.z)
 
-def get_elevation_angles(params):
-    polar_id = f'polar_{params['radarID']}'
-    polar_info = GLOBAL_CONFIG['radar'][polar_id]
-    dates_dir = get_data_dates_dir(polar_info)
-    if dates_dir is None:
+def get_elevation_angles_0(params):
+    pars = _get_elevation_angles(params)
+    if pars is None:
         msg = 'No data found.'
         return response_download_error(
                 msg, 'elevation_angles', 422
             )
 
+    radar = read_radar_data(
+        pars['file'],
+        volume_type=pars['format'],
+        fields_dict=pars['field']
+    )
+    elv_angles = radar.fixed_angle['data']
+    return response_download_json(
+                elv_angles.tolist(), 'elevation_angles'
+            )
+
+def get_elevation_angles_1(params):
+    pars = _get_elevation_angles(params)
+    if pars is None:
+        msg = 'No data found.'
+        return response_download_error(
+                msg, 'elevation_angles', 422
+            )
+
+    dtree = read_xradar_data(
+            pars['file'],
+            volume_type=pars['format'],
+            fields_dict=pars['field']
+        )
+    _, elv_angles = get_sweeps_fixed_angles(dtree)
+    return response_download_json(
+                elv_angles.tolist(), 'elevation_angles'
+            )
+
+def _get_elevation_angles(params):
+    polar_id = f'polar_{params['radarID']}'
+    polar_info = GLOBAL_CONFIG['radar'][polar_id]
+    dates_dir = get_data_dates_dir(polar_info)
+    if dates_dir is None:
+        return None
     first_file = []
     for d in dates_dir:
         data_dir = os.path.join(polar_info['dir'], d)
@@ -58,23 +92,15 @@ def get_elevation_angles(params):
             break
 
     if len(first_file) == 0:
-        msg = 'No data found.'
-        return response_download_error(
-                msg, 'elevation_angles', 422
-            )
+        return None
 
     field_name = get_field_info('ref')['field']
     fields_dict = {'ref': field_name}
-    dtree = read_xradar_data(
-            first_file[0],
-            volume_type=polar_info['format_vol'],
-            fields_dict=fields_dict
-        )
-    # elv_angles = dtree.sweep_fixed_angle.values
-    _, elv_angles = get_sweeps_fixed_angles(dtree)
-    return response_download_json(
-                elv_angles.tolist(), 'elevation_angles'
-            )
+    return {
+        'file': first_file[0],
+        'format': polar_info['format_vol'],
+        'field': fields_dict
+    }
 
 def get_rpolar_time_range(params):
     trg = queryDB_json("""

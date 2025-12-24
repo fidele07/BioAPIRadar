@@ -5,22 +5,7 @@ from app.scripts.util import (
         response_download_data,
         post_get_request
     )
-from .scripts import (
-        download_grid,
-        download_polar_0,
-        download_polar_1,
-        vcross_section_grid,
-        vcross_section_polar_0,
-        vcross_section_polar_1,
-        image_vcross_section_polar_0,
-        image_vcross_section_polar_1,
-        image_vcross_section_grid,
-        get_elevation_angles,
-        anime_gif_grid,
-        anime_gif_polar_0,
-        anime_gif_polar_1,
-        get_rpolar_time_range
-    )
+from .scripts import *
 
 radar_data = Blueprint('radar_data', __name__)
 
@@ -37,7 +22,8 @@ def get_radar():
 @radar_data.route('/elevation_angles', methods=['GET', 'POST'])
 def elevation_angles():
     """Elevation angles."""
-    return response_download_data(get_elevation_angles)
+    return response_download_data(get_elevation_angles_0)
+    # return response_download_data(get_elevation_angles_1)
 
 @radar_data.route('/vcross_section_radar', methods=['GET', 'POST'])
 def vcross_section_radar():
@@ -64,8 +50,8 @@ def get_radar_gif():
     """GIF Radar data."""
     params = post_get_request()
     if params['type'] == 'polar':
-        # return response_download_data(anime_gif_polar_0)
-        return response_download_data(anime_gif_polar_1)
+        return response_download_data(anime_gif_polar_0)
+        # return response_download_data(anime_gif_polar_1)
     else:
         return response_download_data(anime_gif_grid)
 
