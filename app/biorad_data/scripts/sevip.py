@@ -17,7 +17,7 @@ def get_sevip_json(params):
     if not os.path.exists(zarr_path):
         msg = 'Zarr data not found.'
         return response_download_error(
-                msg, 'sp_vertically_integrated', 422
+                msg, 'sevip_data', 422
             )
     ds = xr.open_zarr(
         zarr_path, consolidated=False
@@ -37,8 +37,12 @@ def get_sevip_json(params):
         'data': ds_t[params['parameter']].values
     }
     img_obj = create_imagePng(data, color_name=params['colorbar'])
+    var_time = ds_t.time.values
+    var_time = var_time.astype('datetime64[s]')
+    var_time = var_time.astype(datetime)
     img_obj['info'] = {
-                    'time': data['time'].strftime('%Y-%m-%d %H:%M:%S'),
-                    'name': data['name'], 'units': data['units']
+                    'time': var_time.strftime('%Y-%m-%d %H:%M:%S'),
+                    'name': ds_t[params['parameter']].long_name,
+                    'units': ds_t[params['parameter']].units
                 }
     return response_download_json(img_obj, 'sevip_data')
