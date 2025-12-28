@@ -11,7 +11,8 @@ from .scripts import (
             get_vp_image,
             get_vpts_image,
             get_vtip_image,
-            get_vp_time_range
+            get_vp_time_range,
+            get_vid_time_range
         )
 
 biorad_data = Blueprint('biorad_data', __name__)
@@ -60,3 +61,8 @@ def image_vtip():
 def vp_temporal_coverage():
     """Temporal coverage for all vertical profiles products."""
     return response_download_data(get_vp_time_range)
+
+@biorad_data.route('/vid_temporal_coverage', methods=['GET', 'POST'])
+def vid_temporal_coverage():
+    """Temporal coverage for all vertically integrated parameters."""
+    return response_download_data(get_vid_time_range)
