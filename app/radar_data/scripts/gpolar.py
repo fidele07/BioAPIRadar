@@ -29,7 +29,7 @@ def anime_gif_polar_0(params):
     if data_files is None:
         msg = 'No data found.'
         return response_download_error(
-                msg, 'polar_volume', 422
+                msg, 'polar_data_gif', 422
             )
     path_files = []
     for d in data_files:
@@ -84,6 +84,7 @@ def anime_gif_polar_0(params):
             'lon': lon, 'lat': lat,
             'times': times, 'frames': frames
         }
+
     gif_obj = create_animeGif(data, color_name=params['colorbar'])
     times_info = [t.strftime('%Y-%m-%d %H:%M:%S') for t in times]
     gif_obj['info'] = {
