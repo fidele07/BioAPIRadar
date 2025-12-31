@@ -1,7 +1,7 @@
 import os
 import netCDF4 as nc
 import numpy as np
-from .bioclass import get_class_info
+from .bio_info import get_class_info
 from app.scripts.util import (
         get_data_files_list,
         cftime2datetime,

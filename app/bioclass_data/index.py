@@ -5,11 +5,7 @@ from app.scripts.util import (
         response_download_data,
         post_get_request
     )
-from .scripts import (
-        download_bioclass,
-        get_vcross_bioclass,
-        anime_gif_bioclass
-    )
+from .scripts import *
 
 bioclass_data = Blueprint('bioclass_data', __name__)
 
@@ -38,3 +34,8 @@ def get_bioclass_gif():
     Bird-Insect Classification.
     """
     return response_download_data(anime_gif_bioclass)
+
+@bioclass_data.route('/bioclass_temporal_coverage', methods=['GET', 'POST'])
+def bioclass_temporal_coverage():
+    """Temporal coverage for bio-class data."""
+    return response_download_data(get_bioclass_time_range)

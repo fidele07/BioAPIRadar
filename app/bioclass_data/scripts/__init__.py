@@ -1,3 +1,4 @@
+from .bio_info import *
 from .bioclass import *
 from .vcross_sec import *
 from .bioclass_gif import *

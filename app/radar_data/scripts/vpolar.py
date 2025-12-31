@@ -1,8 +1,10 @@
 import os
 import numpy as np
-from geopy.distance import geodesic
 from datetime import datetime
-from .rinfo import get_field_info
+from .rinfo import (
+        get_field_info,
+        vcross_format_params
+    )
 from app.scripts.util import (
         get_data_file_path,
         response_download_json,
@@ -10,12 +12,8 @@ from app.scripts.util import (
         response_download_image
     )
 from app.scripts._global import GLOBAL_CONFIG
-from app.scripts.interp import (
-        get_line_equation,
-        nearest_neighbor_max_radius
-    )
+from app.scripts.vcross import compute_vcross_polar
 from app.scripts.imagepng import vcross_imagePng
-from app.scripts.checkparams import *
 
 ### polar_0
 from BioModRadar import read_radar_data
@@ -138,15 +136,15 @@ def _vcross_section_polar_0(params):
     lat = np.vstack(lat)
     alt = np.vstack(alt)
 
-    out = _compute_vcross(
+    out = compute_vcross_polar(
         params, data, lon, lat, alt
     )
     out['info'] = {
-                    'time': time,
-                    'name': param_info['name'],
-                    'units': param_info['units'],
-                    'type': params['type']
-                }
+        'time': time,
+        'name': param_info['name'],
+        'units': param_info['units'],
+        'type': params['type']
+    }
     return out
 
 def _vcross_section_polar_1(params):
@@ -199,102 +197,13 @@ def _vcross_section_polar_1(params):
     lat = np.vstack(lat)
     alt = np.vstack(alt)
 
-    out = _compute_vcross(
+    out = compute_vcross_polar(
         params, data, lon, lat, alt
     )
     out['info'] = {
-                    'time': time,
-                    'name': param_info['name'],
-                    'units': param_info['units'],
-                    'type': params['type']
-                }
-    return out
-
-def _compute_vcross(params, data, lon, lat, alt):
-    mn_lo, mx_lo = np.min(lon), np.max(lon)
-    mn_la, mx_la = np.min(lat), np.max(lat)
-    mn_al, mx_al = np.min(alt), np.max(alt)
-
-    hgt = np.linspace(0, 5000, 21)
-    xlon = np.arange(mn_lo, mx_lo, 0.0045)
-    xlat = np.arange(mn_la, mx_la, 0.0045)
-    xl, yl = get_line_equation(
-          xlon, xlat, params['startLon'],
-          params['startLat'], params['endLon'],
-          params['endLat'], params['segment']
-        )
-    nx = len(xl)
-    nz = len(hgt)
-    zl1 = np.repeat(hgt, nx)
-    xl1 = np.concatenate([xl] * nz)
-    yl1 = np.concatenate([yl] * nz)
-
-    # scaling
-    s_lo = (lon - mn_lo) / (mx_lo - mn_lo)
-    s_la = (lat - mn_la) / (mx_la - mn_la)
-    s_al = (alt - mn_al) / (mx_al - mn_al)
-
-    s_xl = (xl1 - mn_lo) / (mx_lo - mn_lo)
-    s_yl = (yl1 - mn_la) / (mx_la - mn_la)
-    s_zl = (zl1 - mn_al) / (mx_al - mn_al)
-
-    max_radius = np.sqrt(
-            np.diff(s_xl[:2])**2 + np.diff(s_yl[:2])**2 + s_zl[nx]**2
-        )
-    points = np.array([s_lo.ravel(), s_la.ravel(), s_al.ravel()]).T
-    new_points = np.vstack((s_xl, s_yl, s_zl)).T
-
-    tmp = data.ravel()
-    im = ~np.isnan(tmp)
-    vcross = nearest_neighbor_max_radius(
-                points[im, :], tmp[im], new_points, 2 * max_radius
-            )
-    vcross = vcross.reshape((nz, nx))
-
-    dist = [0]
-    for i in range(1, nx):
-        p1 = (yl[i - 1], xl[i - 1])
-        p2 = (yl[i], xl[i])
-        dist.append(dist[-1] + geodesic(p1, p2).km)
-    dist = np.array(dist)
-    dist = np.round(dist, 4)
-
-    vcross = np.round(vcross, 4)
-    vcross = np.where(np.isnan(vcross), None, vcross)
-
-    return {
-        'vcross': vcross.tolist(),
-        'xaxis': {
-                'values': dist.tolist(),
-                'label': 'Distance along transect (km)'
-            },
-        'yaxis': {
-                'values': hgt.tolist(),
-                'label': 'Height (m)'
-            },
-        'start_point': {
-                'lon': round(xl[0], 4),
-                'lat': round(yl[0], 4)
-            },
-        'end_point':{
-                'lon': round(xl[-1], 4),
-                'lat': round(yl[-1], 4)
-            }
+        'time': time,
+        'name': param_info['name'],
+        'units': param_info['units'],
+        'type': params['type']
     }
-
-def vcross_format_params(params):
-    pars = params.copy()
-    tmp = checkParamInteger(pars, 'radarID')
-    if tmp['status'] == -1: return tmp
-    pars = tmp['params']
-    tmp = checkParamBoolean(pars, 'segment', True)
-    if tmp['status'] == -1: return tmp
-    pars = tmp['params']
-
-    keys = ['startLon', 'startLat', 'endLon', 'endLat']
-    for key in keys:
-        tmp = checkParamFloat(pars, key)
-        if tmp['status'] == -1:
-            return tmp
-        pars = tmp['params']
-    return {'params': pars, 'status': 0}
+    return out

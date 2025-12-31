@@ -159,6 +159,13 @@ def npdt64todatetime(time):
                     time.second
                     )
 
+def data_grid_time_encoding():
+    return {
+        'units': 'seconds since 1970-01-01T00:00:00Z',
+        'calendar': 'standard',
+        'dtype': 'int64'
+    }
+
 def pretty(low, high, n):
     range = _nicenumber(high - low, False)
     d = _nicenumber(range / (n - 1), True)

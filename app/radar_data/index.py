@@ -59,3 +59,8 @@ def get_radar_gif():
 def rpolar_temporal_coverage():
     """Temporal coverage for polar radar data."""
     return response_download_data(get_rpolar_time_range)
+
+@radar_data.route('/rgrid_temporal_coverage', methods=['GET', 'POST'])
+def rgrid_temporal_coverage():
+    """Temporal coverage for gridded radar data."""
+    return response_download_data(get_rgrid_time_range)

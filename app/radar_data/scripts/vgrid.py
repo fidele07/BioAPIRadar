@@ -1,109 +1,106 @@
 import os
 import netCDF4 as nc
 import numpy as np
-from geopy.distance import geodesic
-from .rinfo import get_field_info
+import xarray as xr
+from datetime import datetime
+from .rinfo import (
+        get_field_info,
+        vcross_format_params
+    )
 from app.scripts.util import (
-        get_data_file_path,
+        data_grid_time_encoding,
         cftime2datetime,
         response_download_json,
-        response_download_error
+        response_download_error,
+        response_download_image
     )
 from app.scripts._global import GLOBAL_CONFIG
-from app.scripts.interp import (
-        get_line_equation,
-        nearest_neighbor_max_radius
-    )
-import pyart
+from app.scripts.vcross import compute_vcross_grid
+from app.scripts.imagepng import vcross_imagePng
 
 def vcross_section_grid(params):
-    grid_info = GLOBAL_CONFIG['radar']['grid']
-    file_path = get_data_file_path(grid_info, params['time'])
-    if file_path is None:
-        msg = 'No data found.'
+    pars = vcross_format_params(params)
+    file = 'vertical_cross_sec_grid'
+    if pars['status'] == -1:
         return response_download_error(
-                msg, 'grid_cartesian', 422
+                pars['message'], file, 422
             )
-    grid = pyart.io.read_grid(file_path)
+    out = _vcross_section_grid(pars['params'])
+    if out is None:
+        msg = 'Zarr data not found.'
+        return response_download_error(
+                msg, file, 422
+            )
+    return response_download_json(out, file)
+
+def image_vcross_section_grid(params):
+    pars = vcross_format_params(params)
+    file = 'vertical_cross_sec_grid'
+    if pars['status'] == -1:
+        return response_download_error(
+                pars['message'], file, 422
+            )
+    vcross = _vcross_section_grid(pars['params'])
+    if vcross is None:
+        msg = 'Zarr data not found.'
+        return response_download_error(
+                msg, file, 422
+            )
+    img_png = vcross_imagePng(
+        vcross, color_name=params['colorbar']
+    )
+    return response_download_image(
+                img_png, file, 'png'
+            )
+
+def _vcross_section_grid(params):
+    zarr_info = GLOBAL_CONFIG['grid']
+    zarr_dirfile = zarr_info['file'] % (params['radarID'])
+    zarr_path = os.path.join(
+        zarr_info['dir'], zarr_dirfile
+    )
+    if not os.path.exists(zarr_path):
+        return None
+
+    ds = xr.open_zarr(
+        zarr_path, consolidated=False
+    )
+    time_encoding = data_grid_time_encoding()
+    time = nc.num2date(
+        ds.time.values,
+        units=time_encoding['units'],
+        calendar=time_encoding['calendar']
+    )
+    time = [cftime2datetime(t) for t in time]
+    format_time = '%Y-%m-%d %H:%M:%S'
+    time_req = datetime.strptime(params['time'], format_time)
+    it = min(range(len(time)), key=lambda i: abs(time[i] - time_req))
+    time_out = time[it].strftime(format_time)
+    ds_t = ds.isel(time=it)
     param_info = get_field_info(params['parameter'])
+
     if params['parameter'] == 'dr':
-        zdr = grid.fields['ZDR']['data']
-        rho = grid.fields['RHOHV']['data']
+        zdr_info = get_field_info('zdr')
+        zdr = ds_t[zdr_info['field']].values
+        rho_info = get_field_info('rho')
+        rho = ds_t[rho_info['field']].values
         num = 1 + zdr - 2 * (zdr**0.5) * rho
         den = 1 + zdr + 2 * (zdr**0.5) * rho
         data = 10 * np.log10(num / den)
     else:
-        data = grid.fields[param_info['field']]['data']
+        data = ds_t[param_info['field']].values
 
-    data = data.filled(np.nan)
-    hgt = grid.z['data'].filled(np.nan)
-    lon, lat = grid.get_point_longitude_latitude()
-    xl, yl = get_line_equation(
-          lon[0, :], lat[:, 0], params['startLon'],
-          params['startLat'], params['endLon'],
-          params['endLat'], params['segment']
-        )
+    lon = ds_t.lon.values
+    lat = ds_t.lat.values
+    hgt = ds_t.z.values
 
-    max_radius = np.sqrt(
-            np.diff(lon[0, :2])**2 + np.diff(lat[:2, 0])**2
-        )
-    points = np.array([lon.ravel(), lat.ravel()]).T
-    new_points = np.vstack((xl, yl)).T
-
-    vcross = np.full((len(hgt), len(xl)), np.nan)
-    for k in range(len(hgt)):
-        tmp = data[k, :, :].ravel()
-        im = ~np.isnan(tmp)
-        vcross[k, :] = nearest_neighbor_max_radius(
-                points[im, :], tmp[im], new_points, max_radius
-            )
-    time = nc.num2date(
-                grid.time['data'][-1],
-                units=grid.time['units'],
-                calendar=grid.time['calendar']
-            )
-    time = cftime2datetime(time)
-    time = time.strftime('%Y-%m-%d %H:%M:%S')
-
-    dist = [0]
-    for i in range(1, len(xl)):
-        p1 = (yl[i - 1], xl[i - 1])
-        p2 = (yl[i], xl[i])
-        dist.append(dist[-1] + geodesic(p1, p2).km)
-    dist = np.array(dist)
-    dist = np.round(dist, 4)
-
-    vcross = np.round(vcross, 4)
-    vcross = np.where(np.isnan(vcross), None, vcross)
-
-    out = {
-        'vcross': vcross.tolist(), 
-        'xaxis': {
-                'values': dist.tolist(),
-                'label': 'Distance along transect (km)'
-            },
-        'yaxis': {
-                'values': hgt.tolist(),
-                'label': 'Height (m)'
-            },
-        'start_point': {
-                'lon': round(xl[0], 4),
-                'lat': round(yl[0], 4)
-            },
-        'end_point':{
-                'lon': round(xl[-1], 4),
-                'lat': round(yl[-1], 4)
-            }
-    }
-
+    out = compute_vcross_grid(
+        params, data, lon, lat, hgt
+    )
     out['info'] = {
-                    'time': time,
-                    'name': param_info['name'],
-                    'units': param_info['units'],
-                    'type': params['type']
-                }
-
-    return response_download_json(out, 'vertical_cross_sec_grid')
-
-def image_vcross_section_grid(params):
-    return {'data': "data:image/png;base64,iVBORw0KGgo", 'status': 0}
+        'time': time_out,
+        'name': param_info['name'],
+        'units': param_info['units'],
+        'type': params['type']
+    }
+    return out

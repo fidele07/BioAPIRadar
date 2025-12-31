@@ -2,7 +2,7 @@ import os
 import netCDF4 as nc
 import numpy as np
 from geopy.distance import geodesic
-from .bioclass import get_class_info
+from .bio_info import get_class_info
 from app.scripts.util import (
         get_data_file_path,
         cftime2datetime,
