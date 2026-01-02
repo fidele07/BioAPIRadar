@@ -30,7 +30,8 @@ def create_animeGif(data,
         zmax = np.nanmax(data['frames'])
 
     if np.isnan(zmax):
-        return None
+        zmin = -0.1
+        zmax = 0.1
 
     if breaks is None:
         if zmin == zmax:
@@ -60,6 +61,8 @@ def create_animeGif(data,
         if isinstance(t, datetime):
             return t.strftime("%Y-%m-%d %H:%M")
         return str(t)
+
+    data['frames'] = np.ma.masked_invalid(data['frames'])
 
     imgs = []
     bounds = None

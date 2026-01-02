@@ -28,7 +28,6 @@ def create_imagePng(data,
         zmax = np.nanmax(data)
 
     if np.isnan(zmax):
-        data = np.ma.masked_invalid(data)
         zmin = -0.1
         zmax = 0.1
 
@@ -47,6 +46,8 @@ def create_imagePng(data,
     else:
         colors_fun = colorRampPalette(colors)
         colors = colors_fun(nkol)
+
+    data = np.ma.masked_invalid(data)
 
     ###### map
     cmap = mcolors.ListedColormap(colors)
