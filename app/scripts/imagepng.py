@@ -28,7 +28,9 @@ def create_imagePng(data,
         zmax = np.nanmax(data)
 
     if np.isnan(zmax):
-        return None
+        data = np.ma.masked_invalid(data)
+        zmin = -0.1
+        zmax = 0.1
 
     if breaks is None:
         if zmin == zmax:
