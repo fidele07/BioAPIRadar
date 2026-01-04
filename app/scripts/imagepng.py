@@ -107,6 +107,7 @@ def vcross_imagePng(vcross, color_name='rainbow'):
     dist = np.array(vcross['xaxis']['values'], dtype=float)
     hgt = np.array(vcross['yaxis']['values'], dtype=float)
     data = np.array(vcross['vcross'], dtype=float)
+    data = np.ma.masked_invalid(data)
 
     fig, ax = plt.subplots(figsize=(10, 8))
     cs = ax.contourf(dist, hgt, data, levels=20, cmap=color_name)
@@ -136,6 +137,7 @@ def bioclass_imagePng(data, color_0='red', color_1='blue'):
         lon = data['lon']
         lat = data['lat']
     data = np.squeeze(data['data'])
+    data = np.ma.masked_invalid(data)
 
     cmap = mcolors.ListedColormap([color_0, color_1])
     norm = mcolors.BoundaryNorm([0, 1], cmap.N)
@@ -167,6 +169,7 @@ def vbioclass_imagePng(vcross, color_0='red', color_1='blue'):
     dist = np.array(vcross['xaxis']['values'], dtype=float)
     hgt = np.array(vcross['yaxis']['values'], dtype=float)
     data = np.array(vcross['vcross'], dtype=float)
+    data = np.ma.masked_invalid(data)
 
     cmap = mcolors.ListedColormap([color_0, color_1])
     norm = mcolors.BoundaryNorm([-0.5, 0.5, 1.5], cmap.N)
