@@ -10,7 +10,6 @@ from app.scripts.util import (
 import xradar as xd
 from pyproj import CRS, Transformer
 from app.scripts.cdb import queryDB_json
-from app.scripts.checkparams import *
 
 from BioModRadar import read_radar_data
 from BioModRadar import read_xradar_data
@@ -138,20 +137,3 @@ def get_rgrid_time_range(params):
     return response_download_json(
                 temp_cov, 'rgrid_temporal_coverage'
             )
-
-def vcross_format_params(params):
-    pars = params.copy()
-    tmp = checkParamInteger(pars, 'radarID')
-    if tmp['status'] == -1: return tmp
-    pars = tmp['params']
-    tmp = checkParamBoolean(pars, 'segment', True)
-    if tmp['status'] == -1: return tmp
-    pars = tmp['params']
-
-    keys = ['startLon', 'startLat', 'endLon', 'endLat']
-    for key in keys:
-        tmp = checkParamFloat(pars, key)
-        if tmp['status'] == -1:
-            return tmp
-        pars = tmp['params']
-    return {'params': pars, 'status': 0}

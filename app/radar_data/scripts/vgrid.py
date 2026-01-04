@@ -3,10 +3,7 @@ import netCDF4 as nc
 import numpy as np
 import xarray as xr
 from datetime import datetime
-from .rinfo import (
-        get_field_info,
-        vcross_format_params
-    )
+from .rinfo import get_field_info
 from app.scripts.util import (
         data_grid_time_encoding,
         cftime2datetime,
@@ -15,7 +12,10 @@ from app.scripts.util import (
         response_download_image
     )
 from app.scripts._global import GLOBAL_CONFIG
-from app.scripts.vcross import compute_vcross_grid
+from app.scripts.vcross import (
+        compute_vcross_grid,
+        vcross_format_params
+    )
 from app.scripts.imagepng import vcross_imagePng
 
 def vcross_section_grid(params):

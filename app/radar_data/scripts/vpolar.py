@@ -1,10 +1,7 @@
 import os
 import numpy as np
 from datetime import datetime
-from .rinfo import (
-        get_field_info,
-        vcross_format_params
-    )
+from .rinfo import get_field_info
 from app.scripts.util import (
         get_data_file_path,
         response_download_json,
@@ -12,7 +9,10 @@ from app.scripts.util import (
         response_download_image
     )
 from app.scripts._global import GLOBAL_CONFIG
-from app.scripts.vcross import compute_vcross_polar
+from app.scripts.vcross import (
+        compute_vcross_polar,
+        vcross_format_params
+    )
 from app.scripts.imagepng import vcross_imagePng
 
 ### polar_0

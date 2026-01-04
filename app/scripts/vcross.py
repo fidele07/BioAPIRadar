@@ -4,6 +4,24 @@ from .interp import (
         get_line_equation,
         nearest_neighbor_max_radius
     )
+from .checkparams import *
+
+def vcross_format_params(params):
+    pars = params.copy()
+    tmp = checkParamInteger(pars, 'radarID')
+    if tmp['status'] == -1: return tmp
+    pars = tmp['params']
+    tmp = checkParamBoolean(pars, 'segment', True)
+    if tmp['status'] == -1: return tmp
+    pars = tmp['params']
+
+    keys = ['startLon', 'startLat', 'endLon', 'endLat']
+    for key in keys:
+        tmp = checkParamFloat(pars, key)
+        if tmp['status'] == -1:
+            return tmp
+        pars = tmp['params']
+    return {'params': pars, 'status': 0}
 
 def compute_vcross_polar(params, data, lon, lat, alt):
     mn_lo, mx_lo = np.min(lon), np.max(lon)

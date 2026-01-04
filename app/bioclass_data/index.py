@@ -26,6 +26,15 @@ def vcross_section_bioclass():
     """
     return response_download_data(get_vcross_bioclass)
 
+@bioclass_data.route('/vcross_section_bioclass_image', methods=['GET', 'POST'])
+def vcross_section_bioclass_image():
+    """
+    Image Vertical cross-section
+    Biological-Meteorological Classification.
+    Bird-Insect Classification.
+    """
+    return response_download_data(image_vcross_bioclass)
+
 @bioclass_data.route('/get_bioclass_gif', methods=['GET', 'POST'])
 def get_bioclass_gif():
     """

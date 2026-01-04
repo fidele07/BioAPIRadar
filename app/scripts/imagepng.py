@@ -4,6 +4,7 @@ import base64
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 import matplotlib.colors as mcolors
+from mpl_toolkits.axes_grid1 import make_axes_locatable
 from .util import pretty
 from .colorbar import format_ColorScale, colorRampPalette
 
@@ -102,6 +103,32 @@ def create_imagePng(data,
 
     return {'data': img_out, 'ckeys': ckeys}
 
+def vcross_imagePng(vcross, color_name='rainbow'):
+    dist = np.array(vcross['xaxis']['values'], dtype=float)
+    hgt = np.array(vcross['yaxis']['values'], dtype=float)
+    data = np.array(vcross['vcross'], dtype=float)
+
+    fig, ax = plt.subplots(figsize=(10, 8))
+    cs = ax.contourf(dist, hgt, data, levels=20, cmap=color_name)
+    divider = make_axes_locatable(ax)
+    cax = divider.append_axes('right', size='2%', pad=0.05)
+    cbar = plt.colorbar(cs, cax=cax)
+    cbar.set_label(f"{vcross['info']['name']} ({vcross['info']['units']})")
+    ax.set_xlabel(vcross['xaxis']['label'])
+    ax.set_ylabel(vcross['yaxis']['label'])
+    ax.set_title(f"Vertical cross section of {vcross['info']['name']}")
+
+    img_buf = io.BytesIO()
+    plt.savefig(img_buf, format='png',
+                bbox_inches=None,
+                transparent=True)
+    img_buf.seek(0)
+    img_png = base64.b64encode(img_buf.getvalue()).decode()
+    img_png = f'data:image/png;base64,{img_png}'
+    plt.close('all')
+
+    return img_png
+
 def bioclass_imagePng(data, color_0='red', color_1='blue'):
     if len(data['lon'].shape) == 1:
         lon, lat = np.meshgrid(data['lon'], data['lat'])
@@ -136,19 +163,31 @@ def bioclass_imagePng(data, color_0='red', color_1='blue'):
 
     return img_out
 
-def vcross_imagePng(vcross, color_name='rainbow'):
+def vbioclass_imagePng(vcross, color_0='red', color_1='blue'):
     dist = np.array(vcross['xaxis']['values'], dtype=float)
     hgt = np.array(vcross['yaxis']['values'], dtype=float)
     data = np.array(vcross['vcross'], dtype=float)
 
+    cmap = mcolors.ListedColormap([color_0, color_1])
+    norm = mcolors.BoundaryNorm([-0.5, 0.5, 1.5], cmap.N)
+
     fig, ax = plt.subplots(figsize=(10, 8))
-    cs = ax.contourf(dist, hgt, data, levels=20, cmap=color_name)
-    cbar = plt.colorbar(cs, ax=ax)
-    cbar.set_label(f"{vcross['info']['name']} ({vcross['info']['units']})")
+    pm = ax.pcolormesh(dist, hgt, data,
+                       cmap=cmap, norm=norm,
+                       shading='nearest'
+                       )
+    divider = make_axes_locatable(ax)
+    cax = divider.append_axes('right', size='2%', pad=0.05)
+    cbar = plt.colorbar(pm, ticks=[0, 1], cax=cax)
+    # cbar.set_label(vcross['info']['name'])
+    cbar.ax.set_yticklabels(
+        vcross['info']['category'], rotation=90, va='center'
+    )
     ax.set_xlabel(vcross['xaxis']['label'])
     ax.set_ylabel(vcross['yaxis']['label'])
-    ax.set_title(f"Vertical cross section of {vcross['info']['name']}")
-
+    ax.set_title(
+        f"Vertical cross section of\n{vcross['info']['name']}"
+    )
     img_buf = io.BytesIO()
     plt.savefig(img_buf, format='png',
                 bbox_inches=None,

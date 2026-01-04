@@ -1,102 +1,111 @@
 import os
 import netCDF4 as nc
 import numpy as np
-from geopy.distance import geodesic
+import xarray as xr
+from datetime import datetime
 from .bio_info import get_class_info
 from app.scripts.util import (
-        get_data_file_path,
+        data_grid_time_encoding,
         cftime2datetime,
         response_download_json,
-        response_download_error
+        response_download_error,
+        response_download_image
     )
 from app.scripts._global import GLOBAL_CONFIG
-from app.scripts.interp import (
-        get_line_equation,
-        nearest_neighbor_max_radius
+
+from app.scripts.vcross import (
+        compute_vcross_grid,
+        vcross_format_params
     )
-import pyart
+from app.scripts.imagepng import vbioclass_imagePng
 
 def get_vcross_bioclass(params):
-    class_info = GLOBAL_CONFIG['class']
-    file_path = get_data_file_path(class_info, params['time'])
-    if file_path is None:
-        msg = 'No data found.'
+    pars = vcross_format_params(params)
+    file = 'vertical_cross_sec_bio'
+    if pars['status'] == -1:
         return response_download_error(
-                msg, 'grid_cartesian', 422
+                pars['message'], file, 422
+            )
+    out = _vcross_section_bioclass(pars['params'])
+    if out is None:
+        msg = 'Zarr data not found.'
+        return response_download_error(
+                msg, file, 422
+            )
+    return response_download_json(out, file)
+
+def image_vcross_bioclass(params):
+    pars = vcross_format_params(params)
+    file = 'vertical_cross_sec_bio'
+    if pars['status'] == -1:
+        return response_download_error(
+                pars['message'], file, 422
+            )
+    vcross = _vcross_section_bioclass(pars['params'])
+    if vcross is None:
+        msg = 'Zarr data not found.'
+        return response_download_error(
+                msg, file, 422
+            )
+    img_png = vbioclass_imagePng(
+        vcross,
+        color_0=params['color_0'],
+        color_1=params['color_1']
+    )
+    return response_download_image(
+                img_png, file, 'png'
             )
 
-    grid = pyart.io.read_grid(file_path)
-    param_info = get_class_info(params['class'])
-    data = grid.fields[param_info['field']]['data']
+def _vcross_section_bioclass(params):
+    zarr_info = GLOBAL_CONFIG['class']
+    zarr_dirfile = zarr_info['file'] % (params['radarID'])
+    zarr_path = os.path.join(
+        zarr_info['dir'], zarr_dirfile
+    )
+    if not os.path.exists(zarr_path):
+        return None
 
-    hgt = grid.z['data'].filled(np.nan)
-    lon, lat = grid.get_point_longitude_latitude()
-    xl, yl = get_line_equation(
-          lon[0, :], lat[:, 0], params['startLon'],
-          params['startLat'], params['endLon'],
-          params['endLat'], params['segment']
-        )
-
-    max_radius = np.sqrt(
-            np.diff(lon[0, :2])**2 + np.diff(lat[:2, 0])**2
-        )
-    points = np.array([lon.ravel(), lat.ravel()]).T
-    new_points = np.vstack((xl, yl)).T
-
-    vcross = np.full((len(hgt), len(xl)), np.nan)
-    for k in range(len(hgt)):
-        tmp = data[k, :, :].ravel()
-        im = ~tmp.mask
-        vcross[k, :] = nearest_neighbor_max_radius(
-                points[im, :], tmp[im].data, new_points, max_radius
-            )
-
+    ds = xr.open_zarr(
+        zarr_path, consolidated=False
+    )
+    time_encoding = data_grid_time_encoding()
     time = nc.num2date(
-                grid.time['data'][-1],
-                units=grid.time['units'],
-                calendar=grid.time['calendar']
-            )
-    time = cftime2datetime(time)
-    time = time.strftime('%Y-%m-%d %H:%M:%S')
+        ds.time.values,
+        units=time_encoding['units'],
+        calendar=time_encoding['calendar']
+    )
+    time = [cftime2datetime(t) for t in time]
+    format_time = '%Y-%m-%d %H:%M:%S'
+    time_req = datetime.strptime(params['time'], format_time)
+    it = min(range(len(time)), key=lambda i: abs(time[i] - time_req))
+    time_out = time[it].strftime(format_time)
+    ds_t = ds.isel(time=it)
+    param_info = get_class_info(params['class'])
 
-    dist = [0]
-    for i in range(1, len(xl)):
-        p1 = (yl[i - 1], xl[i - 1])
-        p2 = (yl[i], xl[i])
-        dist.append(dist[-1] + geodesic(p1, p2).km)
-    dist = np.array(dist)
-    dist = np.round(dist, 4)
+    data = ds_t[param_info['field']].values
+    lon = ds_t.lon.values
+    lat = ds_t.lat.values
+    hgt = ds_t.z.values
 
+    out = compute_vcross_grid(
+        params, data, lon, lat, hgt
+    )
+    vcross = np.array(out['vcross'], dtype=float)
     class_0 = vcross <= 0.5
     class_1 = vcross > 0.5 
     vcross[class_0] = 0
     vcross[class_1] = 1
     vcross = np.where(np.isnan(vcross), None, vcross)
-
-    out = {
-        'vcross': vcross.tolist(), 
-        'xaxis': {
-                'values': dist.tolist(),
-                'label': 'Distance along transect (km)'
-            },
-        'yaxis': {
-                'values': hgt.tolist(),
-                'label': 'Height (m)'
-            },
-        'start_point': {
-                'lon': round(xl[0], 4),
-                'lat': round(yl[0], 4)
-            },
-        'end_point':{
-                'lon': round(xl[-1], 4),
-                'lat': round(yl[-1], 4)
-            }
-    }
-
+    out['vcross'] = vcross.tolist()
+    if params['class'] == 'biometeo':
+        category = ['Meteorological', 'Biological']
+    else:
+        category = ['Insect', 'Bird']
     out['info'] = {
-                    'time': time,
-                    'name': param_info['name'],
-                    'class': params['class']
-                }
-
-    return response_download_json(out, 'vertical_cross_sec_bio')
+        'time': time_out,
+        'name': param_info['name'],
+        'class': params['class'],
+        'level': [0, 1],
+        'category': category
+    }
+    return out
