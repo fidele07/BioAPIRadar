@@ -17,5 +17,5 @@ Markdown
 rpy2
 matplotlib
 scipy
-arm_pyart
 geopy
+xradar
