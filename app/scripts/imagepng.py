@@ -140,12 +140,11 @@ def bioclass_imagePng(data, color_0='red', color_1='blue'):
     data = np.ma.masked_invalid(data)
 
     cmap = mcolors.ListedColormap([color_0, color_1])
-    norm = mcolors.BoundaryNorm([0, 1], cmap.N)
+    norm = mcolors.BoundaryNorm([-0.5, 0.5, 1.5], cmap.N)
 
     fig = plt.figure()
     ax = plt.axes([0, 0, 1, 1])
     pm = ax.pcolormesh(lon, lat, data,
-                       vmin=0, vmax=1,
                        shading='nearest')
     pm.set_cmap(cmap)
     pm.set_norm(norm)
