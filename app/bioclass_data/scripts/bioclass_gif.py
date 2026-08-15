@@ -25,7 +25,7 @@ def anime_gif_bioclass(params):
                 msg, 'class_data_gif', 422
             )
     ds = xr.open_zarr(
-        zarr_path, consolidated=False
+        zarr_path, consolidated=True
     )
     time_encoding = data_grid_time_encoding()
     time = nc.num2date(

@@ -20,7 +20,7 @@ def get_sevip_json(params):
                 msg, 'sevip_data', 422
             )
     ds = xr.open_zarr(
-        zarr_path, consolidated=False
+        zarr_path, consolidated=True
     )
     time = ds.time.values
     time = time.astype('datetime64[s]')

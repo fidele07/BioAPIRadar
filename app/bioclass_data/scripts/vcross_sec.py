@@ -66,7 +66,7 @@ def _vcross_section_bioclass(params):
         return None
 
     ds = xr.open_zarr(
-        zarr_path, consolidated=False
+        zarr_path, consolidated=True
     )
     time_encoding = data_grid_time_encoding()
     time = nc.num2date(

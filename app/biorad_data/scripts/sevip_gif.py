@@ -21,7 +21,7 @@ def anime_gif_sevip(params):
                 msg, 'sevip_data_gif', 422
             )
     ds = xr.open_zarr(
-        zarr_path, consolidated=False
+        zarr_path, consolidated=True
     )
     time = [
         t.astype('datetime64[s]')
