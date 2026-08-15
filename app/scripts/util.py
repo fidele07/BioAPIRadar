@@ -17,6 +17,28 @@ from flask import (
             Response
         )
 
+def open_zarr_retry(zarr_path, retries=4, delay=1.5):
+    """Open a zarr store that another process may be appending to.
+
+    Appends write the store's arrays one after another, so a reader can
+    briefly see inconsistent dimension lengths ("conflicting sizes for
+    dimension 'time'"). Consolidated metadata does not survive appends
+    with the current zarr v3 stack, so instead retry the raw open a few
+    times — torn states only last for moments between variable writes.
+    """
+    import time as _time
+    import xarray as xr
+    last_err = None
+    for _ in range(retries):
+        try:
+            return xr.open_zarr(zarr_path, consolidated=False)
+        except ValueError as e:
+            if 'conflicting sizes' not in str(e):
+                raise
+            last_err = e
+            _time.sleep(delay)
+    raise last_err
+
 def load_yaml_file(file_path):
     with open(file_path, 'r', encoding='utf-8') as f:
         try:

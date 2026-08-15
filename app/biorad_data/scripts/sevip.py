@@ -2,6 +2,7 @@ import os
 import xarray as xr
 from datetime import datetime
 from app.scripts.util import (
+            open_zarr_retry,
         response_download_json,
         response_download_error
     )
@@ -19,9 +20,7 @@ def get_sevip_json(params):
         return response_download_error(
                 msg, 'sevip_data', 422
             )
-    ds = xr.open_zarr(
-        zarr_path, consolidated=True
-    )
+    ds = open_zarr_retry(zarr_path)
     time = ds.time.values
     time = time.astype('datetime64[s]')
     time = time.astype(datetime)

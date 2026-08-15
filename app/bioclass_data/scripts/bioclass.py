@@ -5,6 +5,7 @@ import xarray as xr
 from datetime import datetime
 from .bio_info import get_class_info
 from app.scripts.util import (
+            open_zarr_retry,
         data_grid_time_encoding,
         cftime2datetime,
         response_download_json,
@@ -24,9 +25,7 @@ def download_bioclass(params):
         return response_download_error(
                 msg, 'class_data', 422
             )
-    ds = xr.open_zarr(
-        zarr_path, consolidated=True
-    )
+    ds = open_zarr_retry(zarr_path)
     time_encoding = data_grid_time_encoding()
     time = nc.num2date(
         ds.time.values,

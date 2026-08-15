@@ -3,6 +3,7 @@ import numpy as np
 import xarray as xr
 from datetime import datetime
 from app.scripts.util import (
+            open_zarr_retry,
         response_download_json,
         response_download_error
     )
@@ -20,9 +21,7 @@ def anime_gif_sevip(params):
         return response_download_error(
                 msg, 'sevip_data_gif', 422
             )
-    ds = xr.open_zarr(
-        zarr_path, consolidated=True
-    )
+    ds = open_zarr_retry(zarr_path)
     time = [
         t.astype('datetime64[s]')
         for t in ds.time.values

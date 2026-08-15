@@ -5,6 +5,7 @@ import xarray as xr
 from datetime import datetime
 from .bio_info import get_class_info
 from app.scripts.util import (
+            open_zarr_retry,
         data_grid_time_encoding,
         cftime2datetime,
         response_download_json,
@@ -65,9 +66,7 @@ def _vcross_section_bioclass(params):
     if not os.path.exists(zarr_path):
         return None
 
-    ds = xr.open_zarr(
-        zarr_path, consolidated=True
-    )
+    ds = open_zarr_retry(zarr_path)
     time_encoding = data_grid_time_encoding()
     time = nc.num2date(
         ds.time.values,
