@@ -39,14 +39,24 @@ def download_bioclass(params):
     time_out = time[it].strftime(format_time)
     height = ds.z.values
     hgt_req = float(params['height'])
-    iz = min(range(len(height)), key=lambda i: abs(height[i] - hgt_req))
-    z_out = height[iz]
-    ds_t = ds.isel(time=it, z=iz)
+    # height < 0 requests the column composite: the class maximum over
+    # all heights (a gate is Bird/Biological if any level says so)
+    composite = hgt_req < 0
+    if composite:
+        ds_t = ds.isel(time=it)
+        z_label = 'Composite (max)'
+    else:
+        iz = min(range(len(height)), key=lambda i: abs(height[i] - hgt_req))
+        z_label = f'{height[iz]} m'
+        ds_t = ds.isel(time=it, z=iz)
     param_info = get_class_info(params['class'])
+    class_data = ds_t[param_info['field']].values
+    if composite:
+        class_data = np.nanmax(class_data, axis=0)
     data = {
         'lon': ds_t.lon.values,
         'lat': ds_t.lat.values,
-        'data': ds_t[param_info['field']].values
+        'data': class_data
     }
     img_obj = bioclass_imagePng(
         data,
@@ -66,7 +76,7 @@ def download_bioclass(params):
         }
     out['info'] = {
                     'time': time_out,
-                    'height': f'{z_out} m',
+                    'height': z_label,
                     'name': param_info['name'],
                     'class': params['class']
                 }

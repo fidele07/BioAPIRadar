@@ -39,9 +39,15 @@ def download_grid(params):
     time_out = time[it].strftime(format_time)
     height = ds.z.values
     hgt_req = float(params['height'])
-    iz = min(range(len(height)), key=lambda i: abs(height[i] - hgt_req))
-    z_out = height[iz]
-    ds_t = ds.isel(time=it, z=iz)
+    # height < 0 requests the column composite (maximum over all heights)
+    composite = hgt_req < 0
+    if composite:
+        ds_t = ds.isel(time=it)
+        z_label = 'Composite (max)'
+    else:
+        iz = min(range(len(height)), key=lambda i: abs(height[i] - hgt_req))
+        z_label = f'{height[iz]} m'
+        ds_t = ds.isel(time=it, z=iz)
     param_info = get_field_info(params['parameter'])
 
     if params['parameter'] == 'dr':
@@ -49,11 +55,16 @@ def download_grid(params):
         zdr = ds_t[zdr_info['field']].values
         rho_info = get_field_info('rho')
         rho = ds_t[rho_info['field']].values
-        num = 1 + zdr - 2 * (zdr**0.5) * rho
-        den = 1 + zdr + 2 * (zdr**0.5) * rho
+        # DR formula requires LINEAR differential reflectivity; ZDR is
+        # stored in dB (negative values are common for biology)
+        zdr_lin = 10.0 ** (zdr / 10.0)
+        num = 1 + zdr_lin - 2 * (zdr_lin**0.5) * rho
+        den = 1 + zdr_lin + 2 * (zdr_lin**0.5) * rho
         data = 10 * np.log10(num / den)
     else:
         data = ds_t[param_info['field']].values
+    if composite:
+        data = np.nanmax(data, axis=0)
 
     data = {
         'lon': ds_t.lon.values,
@@ -65,7 +76,7 @@ def download_grid(params):
     )
     img_obj['info'] = {
                     'time': time_out,
-                    'height': f'{z_out} m',
+                    'height': z_label,
                     'name': param_info['name'],
                     'units': param_info['units'],
                     'type': params['type']
