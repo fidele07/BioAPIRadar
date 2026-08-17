@@ -5,6 +5,8 @@ import os
 import sys
 import json
 import glob
+import time
+import hashlib
 import numpy as np
 import contextlib
 import base64
@@ -16,6 +18,50 @@ from flask import (
             request,
             Response
         )
+
+# --- Response cache -------------------------------------------------------
+# Radar products are immutable once written (reprocessing overwrites them
+# slowly, on the order of hours), while the dashboards request the same
+# frames over and over (timeline scrubbing, players, multiple viewers).
+# Successful JSON responses are cached on local disk keyed by endpoint +
+# payload; entries expire after BIOAPI_CACHE_TTL seconds (default 1 h, so
+# reprocessed history refreshes within the hour). Coverage/time-range
+# endpoints are exempt — they drive "live" freshness.
+CACHE_DIR = os.environ.get(
+    'BIOAPI_CACHE_DIR',
+    '/home/pest_radar/pestradar/BioDataRadar/api_cache'
+)
+CACHE_TTL = int(os.environ.get('BIOAPI_CACHE_TTL', '3600'))
+CACHE_EXEMPT = ('time_range', 'coverage', 'proctime')
+
+def _cache_path(name, params):
+    key = hashlib.sha256(
+        json.dumps([name, params], sort_keys=True, default=str).encode()
+    ).hexdigest()
+    return os.path.join(CACHE_DIR, key[:2], key + '.json')
+
+def _cache_get(path):
+    try:
+        if time.time() - os.stat(path).st_mtime < CACHE_TTL:
+            with open(path, 'rb') as f:
+                body = f.read()
+            resp = make_response(body, 200)
+            resp.mimetype = 'application/json'
+            resp.headers['X-Cache'] = 'HIT'
+            return resp
+    except OSError:
+        pass
+    return None
+
+def _cache_put(path, resp):
+    try:
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+        tmp = f'{path}.{os.getpid()}.tmp'
+        with open(tmp, 'wb') as f:
+            f.write(resp.get_data())
+        os.replace(tmp, path)
+    except OSError:
+        pass
 
 def open_zarr_retry(zarr_path, retries=4, delay=1.5):
     """Open a zarr store that another process may be appending to.
@@ -124,7 +170,21 @@ def response_download_data(callback):
         # params = check_params['params']
         # params['user'] = check_user['user']
         params = convert_kigali_utc(params)
-        return callback(params)
+        name = getattr(callback, '__name__', '')
+        cacheable = CACHE_TTL > 0 and not any(
+            token in name for token in CACHE_EXEMPT
+        )
+        if cacheable:
+            path = _cache_path(name, params)
+            cached = _cache_get(path)
+            if cached is not None:
+                return cached
+        resp = callback(params)
+        if (cacheable
+                and getattr(resp, 'status_code', None) == 200
+                and resp.mimetype == 'application/json'):
+            _cache_put(path, resp)
+        return resp
     except Exception as e:
         response = make_response(
                 jsonify({'status': -1, 'message': str(e)}),
