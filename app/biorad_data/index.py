@@ -12,7 +12,8 @@ from .scripts import (
             get_vpts_image,
             get_vtip_image,
             get_vp_time_range,
-            get_vid_time_range
+            get_vid_time_range,
+            get_region_vid_json
         )
 
 biorad_data = Blueprint('biorad_data', __name__)
@@ -56,6 +57,11 @@ def image_vpts():
 def image_vtip():
     """Plot vertical and time integration of profiles."""
     return response_download_data(get_vtip_image)
+
+@biorad_data.route('/get_region_vid', methods=['POST'])
+def get_region_vid():
+    """Polygon aggregation of vertically integrated parameters (analytics)."""
+    return response_download_data(get_region_vid_json)
 
 @biorad_data.route('/vp_temporal_coverage', methods=['GET', 'POST'])
 def vp_temporal_coverage():
