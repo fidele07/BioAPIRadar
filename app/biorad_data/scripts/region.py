@@ -1,6 +1,4 @@
-import base64
 import os
-import struct
 from datetime import datetime, timezone
 
 import numpy as np
@@ -8,6 +6,7 @@ import zarr
 from matplotlib.path import Path
 
 from app.scripts.util import (
+        decode_fill_value,
         response_download_json,
         response_download_error
     )
@@ -20,24 +19,6 @@ MAX_TIME_STEPS = 3000
 # even for a whole-domain polygon).
 BATCH = 200
 
-def _decode_fill_value(attrs):
-    """The stores carry _FillValue either as a number or as base64-encoded
-    little-endian float64 bytes (zarr v3 binary attribute encoding)."""
-    fv = attrs.get('_FillValue', attrs.get('missing_value'))
-    if fv is None:
-        return None
-    if isinstance(fv, (int, float)):
-        return float(fv)
-    if isinstance(fv, str):
-        try:
-            raw = base64.b64decode(fv)
-            if len(raw) == 8:
-                return struct.unpack('<d', raw)[0]
-            if len(raw) == 4:
-                return struct.unpack('<f', raw)[0]
-        except Exception:
-            return None
-    return None
 
 def get_region_vid_json(params):
     """Aggregate a vertically-integrated parameter over a user polygon.
@@ -155,7 +136,7 @@ def get_region_vid_json(params):
     area_km2 = float(cell_km2[inside].sum())
 
     arr = store[parameter]
-    fill = _decode_fill_value(dict(arr.attrs))
+    fill = decode_fill_value(dict(arr.attrs))
     mean_out = np.full(it1 - it0, np.nan)
     max_out = np.full(it1 - it0, np.nan)
     aloft_out = np.full(it1 - it0, np.nan)

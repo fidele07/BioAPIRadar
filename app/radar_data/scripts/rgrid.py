@@ -1,18 +1,29 @@
 import os
-import netCDF4 as nc
 import numpy as np
-import xarray as xr
-from datetime import datetime
+import zarr
+from datetime import datetime, timezone
 from .rinfo import get_field_info
 from app.scripts.util import (
-            open_zarr_retry,
-        data_grid_time_encoding,
-        cftime2datetime,
+        decode_fill_value,
         response_download_json,
         response_download_error
     )
 from app.scripts._global import GLOBAL_CONFIG
 from app.scripts.imagepng import create_imagePng
+
+def _read_field(store, field, it, iz, fill):
+    """One timestep (level or full column) of a field, fill masked to NaN.
+    Direct zarr read — the xarray/dask path built per-request task graphs
+    over every chunk of the growing store and OOM-killed workers."""
+    arr = store[field]
+    if iz is None:
+        data = np.asarray(arr[it], dtype='float64')
+    else:
+        data = np.asarray(arr[it, iz], dtype='float64')
+    f = fill if fill is not None else decode_fill_value(dict(arr.attrs))
+    if f is not None:
+        data[data == f] = np.nan
+    return data
 
 def download_grid(params):
     zarr_info = GLOBAL_CONFIG['grid']
@@ -25,50 +36,49 @@ def download_grid(params):
         return response_download_error(
                 msg, 'grid_data', 422
             )
-    ds = open_zarr_retry(zarr_path)
-    time_encoding = data_grid_time_encoding()
-    time = nc.num2date(
-        ds.time.values,
-        units=time_encoding['units'],
-        calendar=time_encoding['calendar']
-    )
-    time = [cftime2datetime(t) for t in time]
+    store = zarr.open_group(zarr_path, mode='r')
+    # time stored as epoch seconds (data_grid_time_encoding)
+    time_s = store['time'][:].astype('int64')
     format_time = '%Y-%m-%d %H:%M:%S'
-    time_req = datetime.strptime(params['time'], format_time)
-    it = min(range(len(time)), key=lambda i: abs(time[i] - time_req))
-    time_out = time[it].strftime(format_time)
-    height = ds.z.values
+    t_req = int(
+        datetime.strptime(params['time'], format_time)
+        .replace(tzinfo=timezone.utc).timestamp()
+    )
+    it = int(np.abs(time_s - t_req).argmin())
+    time_out = datetime.fromtimestamp(
+        int(time_s[it]), tz=timezone.utc
+    ).strftime(format_time)
+    height = store['z'][:]
     hgt_req = float(params['height'])
     # height < 0 requests the column composite (maximum over all heights)
     composite = hgt_req < 0
     if composite:
-        ds_t = ds.isel(time=it)
+        iz = None
         z_label = 'Composite (max)'
     else:
-        iz = min(range(len(height)), key=lambda i: abs(height[i] - hgt_req))
+        iz = int(np.abs(height - hgt_req).argmin())
         z_label = f'{height[iz]} m'
-        ds_t = ds.isel(time=it, z=iz)
     param_info = get_field_info(params['parameter'])
 
     if params['parameter'] == 'dr':
-        zdr_info = get_field_info('zdr')
-        zdr = ds_t[zdr_info['field']].values
-        rho_info = get_field_info('rho')
-        rho = ds_t[rho_info['field']].values
+        zdr = _read_field(store, get_field_info('zdr')['field'], it, iz, None)
+        rho = _read_field(store, get_field_info('rho')['field'], it, iz, None)
         # DR formula requires LINEAR differential reflectivity; ZDR is
         # stored in dB (negative values are common for biology)
         zdr_lin = 10.0 ** (zdr / 10.0)
         num = 1 + zdr_lin - 2 * (zdr_lin**0.5) * rho
         den = 1 + zdr_lin + 2 * (zdr_lin**0.5) * rho
-        data = 10 * np.log10(num / den)
+        with np.errstate(invalid='ignore', divide='ignore'):
+            data = 10 * np.log10(num / den)
     else:
-        data = ds_t[param_info['field']].values
+        data = _read_field(store, param_info['field'], it, iz, None)
     if composite:
-        data = np.nanmax(data, axis=0)
+        with np.errstate(invalid='ignore'):
+            data = np.nanmax(data, axis=0)
 
     data = {
-        'lon': ds_t.lon.values,
-        'lat': ds_t.lat.values,
+        'lon': store['lon'][:],
+        'lat': store['lat'][:],
         'data': data
     }
     img_obj = create_imagePng(

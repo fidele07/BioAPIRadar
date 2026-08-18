@@ -34,6 +34,26 @@ CACHE_DIR = os.environ.get(
 CACHE_TTL = int(os.environ.get('BIOAPI_CACHE_TTL', '3600'))
 CACHE_EXEMPT = ('time_range', 'coverage', 'proctime')
 
+def decode_fill_value(attrs):
+    """Stores carry _FillValue either as a number or as base64-encoded
+    little-endian float bytes (zarr v3 binary attribute encoding)."""
+    import struct
+    fv = attrs.get('_FillValue', attrs.get('missing_value'))
+    if fv is None:
+        return None
+    if isinstance(fv, (int, float)):
+        return float(fv)
+    if isinstance(fv, str):
+        try:
+            raw = base64.b64decode(fv)
+            if len(raw) == 8:
+                return struct.unpack('<d', raw)[0]
+            if len(raw) == 4:
+                return struct.unpack('<f', raw)[0]
+        except Exception:
+            return None
+    return None
+
 def _cache_path(name, params):
     key = hashlib.sha256(
         json.dumps([name, params], sort_keys=True, default=str).encode()

@@ -1,13 +1,10 @@
 import os
-import netCDF4 as nc
 import numpy as np
-import xarray as xr
-from datetime import datetime
+import zarr
+from datetime import datetime, timezone
 from .bio_info import get_class_info
 from app.scripts.util import (
-            open_zarr_retry,
-        data_grid_time_encoding,
-        cftime2datetime,
+        decode_fill_value,
         response_download_json,
         response_download_error
     )
@@ -15,6 +12,15 @@ from app.scripts._global import GLOBAL_CONFIG
 from app.scripts.imagepng import bioclass_imagePng
 
 def download_bioclass(params):
+    """Classification frame rendered from the bioclass store.
+
+    Reads the store directly with zarr: the xarray/dask path built a
+    per-request task graph over every chunk of the ever-growing store
+    (per-timestep chunking -> hundreds of thousands of chunks), which
+    ballooned uWSGI workers to 7-11 GB per request under the frame
+    preloader and OOM-killed the service. A direct read touches only
+    the requested timestep (~8 MB per level, ~170 MB for a composite).
+    """
     zarr_info = GLOBAL_CONFIG['class']
     zarr_dirfile = zarr_info['file'] % (params['radarID'])
     zarr_path = os.path.join(
@@ -25,37 +31,42 @@ def download_bioclass(params):
         return response_download_error(
                 msg, 'class_data', 422
             )
-    ds = open_zarr_retry(zarr_path)
-    time_encoding = data_grid_time_encoding()
-    time = nc.num2date(
-        ds.time.values,
-        units=time_encoding['units'],
-        calendar=time_encoding['calendar']
-    )
-    time = [cftime2datetime(t) for t in time]
+    store = zarr.open_group(zarr_path, mode='r')
+    # time stored as epoch seconds (data_grid_time_encoding)
+    time_s = store['time'][:].astype('int64')
     format_time = '%Y-%m-%d %H:%M:%S'
-    time_req = datetime.strptime(params['time'], format_time)
-    it = min(range(len(time)), key=lambda i: abs(time[i] - time_req))
-    time_out = time[it].strftime(format_time)
-    height = ds.z.values
+    t_req = int(
+        datetime.strptime(params['time'], format_time)
+        .replace(tzinfo=timezone.utc).timestamp()
+    )
+    it = int(np.abs(time_s - t_req).argmin())
+    time_out = datetime.fromtimestamp(
+        int(time_s[it]), tz=timezone.utc
+    ).strftime(format_time)
+    height = store['z'][:]
     hgt_req = float(params['height'])
+    param_info = get_class_info(params['class'])
+    arr = store[param_info['field']]
+    fill = decode_fill_value(dict(arr.attrs))
     # height < 0 requests the column composite: the class maximum over
     # all heights (a gate is Bird/Biological if any level says so)
     composite = hgt_req < 0
     if composite:
-        ds_t = ds.isel(time=it)
         z_label = 'Composite (max)'
+        class_data = np.asarray(arr[it], dtype='float64')
+        if fill is not None:
+            class_data[class_data == fill] = np.nan
+        with np.errstate(invalid='ignore'):
+            class_data = np.nanmax(class_data, axis=0)
     else:
-        iz = min(range(len(height)), key=lambda i: abs(height[i] - hgt_req))
+        iz = int(np.abs(height - hgt_req).argmin())
         z_label = f'{height[iz]} m'
-        ds_t = ds.isel(time=it, z=iz)
-    param_info = get_class_info(params['class'])
-    class_data = ds_t[param_info['field']].values
-    if composite:
-        class_data = np.nanmax(class_data, axis=0)
+        class_data = np.asarray(arr[it, iz], dtype='float64')
+        if fill is not None:
+            class_data[class_data == fill] = np.nan
     data = {
-        'lon': ds_t.lon.values,
-        'lat': ds_t.lat.values,
+        'lon': store['lon'][:],
+        'lat': store['lat'][:],
         'data': class_data
     }
     img_obj = bioclass_imagePng(
