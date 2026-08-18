@@ -91,12 +91,30 @@ def get_sevip_json(params):
         name = 'Migration traffic rate (VID x speed)'
         units = '#/km/h'
 
+    # Optional fixed class breaks from the client: keeps the colormap
+    # identical across animation frames and species-calibrated, instead
+    # of rescaling to each frame's own min/max. Values beyond the last
+    # break saturate into the top color.
+    breaks = params.get('breaks')
+    if breaks is not None:
+        try:
+            breaks = [float(b) for b in breaks][:40]
+        except (TypeError, ValueError):
+            breaks = None
+        if breaks is not None and (
+            len(breaks) < 2
+            or any(b2 <= b1 for b1, b2 in zip(breaks, breaks[1:]))
+        ):
+            breaks = None
+
     data = {
         'lon': store['lon'][:],
         'lat': store['lat'][:],
         'data': values
     }
-    img_obj = create_imagePng(data, color_name=params['colorbar'])
+    img_obj = create_imagePng(
+        data, breaks=breaks, color_name=params['colorbar']
+    )
     img_obj['info'] = {
                     'time': var_time_str,
                     'name': name,
