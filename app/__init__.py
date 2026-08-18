@@ -26,6 +26,7 @@ from app.scripts.geojson import (
                             get_attr_geojson
                         )
 from app.scripts.vpproctime import get_vp_proctime_image
+from app.scripts.point_value import get_point_value_json
 
 ### 
 from app.biorad_data.index import biorad_data
@@ -48,3 +49,8 @@ def attr_geojson():
 @app.route('/vp_proctime', methods=['GET', 'POST'])
 def vp_proctime():
     return response_download_data(get_vp_proctime_image)
+
+@app.route('/get_point_value', methods=['POST'])
+def get_point_value():
+    """Layer value under the map cursor (hover readout)."""
+    return response_download_data(get_point_value_json)

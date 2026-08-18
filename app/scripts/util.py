@@ -32,7 +32,7 @@ CACHE_DIR = os.environ.get(
     '/home/pest_radar/pestradar/BioDataRadar/api_cache'
 )
 CACHE_TTL = int(os.environ.get('BIOAPI_CACHE_TTL', '3600'))
-CACHE_EXEMPT = ('time_range', 'coverage', 'proctime')
+CACHE_EXEMPT = ('time_range', 'coverage', 'proctime', 'point_value')
 
 def decode_fill_value(attrs):
     """Stores carry _FillValue either as a number or as base64-encoded
