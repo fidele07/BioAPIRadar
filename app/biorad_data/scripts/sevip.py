@@ -12,32 +12,34 @@ from app.scripts.cdb import queryDB_json
 from app.scripts.imagepng import create_imagePng
 
 def _mean_ground_speed_kmh(species, var_time, radar_id):
-    """Density-weighted mean ground speed (km/h) from the vertical profile
-    nearest to var_time (within 15 minutes). None when no usable profile
-    exists — the caller reports that no MTR can be derived."""
+    """Density-weighted mean ground speed (km/h) from the vertical
+    profiles around var_time. Aggregates over every profile in the
+    window rather than the single nearest scan: reprocessed Step-1
+    profiles often have no speed layers on an individual scan (quiet
+    or partitioned away), which starved the old LIMIT-1 lookup. Tries
+    +/-15 minutes first, then widens to +/-3 hours (VID is near zero
+    whenever no profile in 3 h carries a speed, so the wider window
+    cannot distort the derived MTR). None when both windows are empty."""
     table = 'vp_bird' if species == 'bird' else 'vp_insect'
-    rows = queryDB_json(
-        f"""
-        SELECT COALESCE(
-                   sum(t.ff * t.dens) / NULLIF(sum(t.dens), 0),
-                   avg(t.ff)
-               ) AS ff
-        FROM {table} t
-        JOIN (
-            SELECT id FROM vp_polar
-            WHERE radar_id = %s
-              AND date_time BETWEEN %s::timestamp - interval '15 minutes'
-                                AND %s::timestamp + interval '15 minutes'
-            ORDER BY abs(extract(epoch FROM (date_time - %s::timestamp)))
-            LIMIT 1
-        ) p ON t.polar_id = p.id
-        WHERE t.ff IS NOT NULL;
-        """,
-        (radar_id, var_time, var_time, var_time)
-    )
-    if not rows or rows[0]['ff'] is None:
-        return None
-    return float(rows[0]['ff']) * 3.6
+    for window in ('15 minutes', '3 hours'):
+        rows = queryDB_json(
+            f"""
+            SELECT COALESCE(
+                       sum(t.ff * t.dens) / NULLIF(sum(t.dens), 0),
+                       avg(t.ff)
+                   ) AS ff
+            FROM {table} t
+            JOIN vp_polar p ON t.polar_id = p.id
+            WHERE p.radar_id = %s
+              AND p.date_time BETWEEN %s::timestamp - interval %s
+                                  AND %s::timestamp + interval %s
+              AND t.ff IS NOT NULL;
+            """,
+            (radar_id, var_time, window, var_time, window)
+        )
+        if rows and rows[0]['ff'] is not None:
+            return float(rows[0]['ff']) * 3.6
+    return None
 
 def get_sevip_json(params):
     zarr_info = GLOBAL_CONFIG['vertical']['zarr']
