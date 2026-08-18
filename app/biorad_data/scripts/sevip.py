@@ -1,8 +1,9 @@
 import os
-import xarray as xr
-from datetime import datetime
+import numpy as np
+import zarr
 from app.scripts.util import (
-            open_zarr_retry,
+        decode_fill_value,
+        zarr_nearest_time,
         response_download_json,
         response_download_error
     )
@@ -49,33 +50,33 @@ def get_sevip_json(params):
         return response_download_error(
                 msg, 'sevip_data', 422
             )
-    ds = open_zarr_retry(zarr_path)
-    time = ds.time.values
-    time = time.astype('datetime64[s]')
-    time = time.astype(datetime)
-    format_time = '%Y-%m-%d %H:%M:%S'
-    time_req = datetime.strptime(params['time'], format_time)
-    it = min(range(len(time)), key=lambda i: abs(time[i] - time_req))
-    ds_t = ds.isel(time=it)
-    species = 1 if params['species'] == 'bird' else 0
-    ds_t = ds_t.sel(species=species)
+    # direct zarr read — one (species, time) frame only; the xarray path
+    # built dask graphs over the store's ~19M chunks per request
+    store = zarr.open_group(zarr_path, mode='r')
+    it, var_time_str = zarr_nearest_time(store, params['time'])
+    species_value = 1 if params['species'] == 'bird' else 0
+    sp_idx = np.where(store['species'][:] == species_value)[0]
+    isp = int(sp_idx[0]) if sp_idx.size else 0
 
     # Derived spatial MTR: the store holds VID (#/km2); the migration
     # traffic rate across a 1 km front is VID x ground speed, with the
     # speed taken from the concurrent vertical profile (radar-domain,
     # density-weighted). MTR = vid [#/km2] x speed [km/h] -> #/km/h.
     parameter = params['parameter']
-    derived_mtr = parameter == 'mtr' and 'mtr' not in ds
+    derived_mtr = parameter == 'mtr' and 'mtr' not in store
     read_par = 'vid' if derived_mtr else parameter
+    if read_par not in store:
+        msg = f'Unknown parameter <{read_par}>.'
+        return response_download_error(msg, 'sevip_data', 422)
 
-    var_time = ds_t.time.values
-    var_time = var_time.astype('datetime64[s]')
-    var_time = var_time.astype(datetime)
-    var_time_str = var_time.strftime('%Y-%m-%d %H:%M:%S')
-
-    values = ds_t[read_par].values
-    name = ds_t[read_par].long_name
-    units = ds_t[read_par].units
+    arr = store[read_par]
+    values = np.asarray(arr[isp, it], dtype='float64')
+    fill = decode_fill_value(dict(arr.attrs))
+    if fill is not None:
+        values[values == fill] = np.nan
+    attrs = dict(arr.attrs)
+    name = str(attrs.get('long_name', read_par))
+    units = str(attrs.get('units', ''))
     if derived_mtr:
         speed_kmh = _mean_ground_speed_kmh(
             params['species'], var_time_str, params['radarID']
@@ -89,8 +90,8 @@ def get_sevip_json(params):
         units = '#/km/h'
 
     data = {
-        'lon': ds_t.lon.values,
-        'lat': ds_t.lat.values,
+        'lon': store['lon'][:],
+        'lat': store['lat'][:],
         'data': values
     }
     img_obj = create_imagePng(data, color_name=params['colorbar'])

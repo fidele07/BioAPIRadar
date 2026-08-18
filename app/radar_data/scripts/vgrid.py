@@ -1,13 +1,10 @@
 import os
-import netCDF4 as nc
 import numpy as np
-import xarray as xr
-from datetime import datetime
+import zarr
 from .rinfo import get_field_info
 from app.scripts.util import (
-            open_zarr_retry,
-        data_grid_time_encoding,
-        cftime2datetime,
+        zarr_nearest_time,
+        zarr_read_timestep,
         response_download_json,
         response_download_error,
         response_download_image
@@ -63,35 +60,27 @@ def _vcross_section_grid(params):
     if not os.path.exists(zarr_path):
         return None
 
-    ds = open_zarr_retry(zarr_path)
-    time_encoding = data_grid_time_encoding()
-    time = nc.num2date(
-        ds.time.values,
-        units=time_encoding['units'],
-        calendar=time_encoding['calendar']
-    )
-    time = [cftime2datetime(t) for t in time]
-    format_time = '%Y-%m-%d %H:%M:%S'
-    time_req = datetime.strptime(params['time'], format_time)
-    it = min(range(len(time)), key=lambda i: abs(time[i] - time_req))
-    time_out = time[it].strftime(format_time)
-    ds_t = ds.isel(time=it)
+    store = zarr.open_group(zarr_path, mode='r')
+    it, time_out = zarr_nearest_time(store, params['time'])
     param_info = get_field_info(params['parameter'])
 
     if params['parameter'] == 'dr':
-        zdr_info = get_field_info('zdr')
-        zdr = ds_t[zdr_info['field']].values
-        rho_info = get_field_info('rho')
-        rho = ds_t[rho_info['field']].values
-        num = 1 + zdr - 2 * (zdr**0.5) * rho
-        den = 1 + zdr + 2 * (zdr**0.5) * rho
-        data = 10 * np.log10(num / den)
+        zdr = zarr_read_timestep(store, get_field_info('zdr')['field'], it)
+        rho = zarr_read_timestep(store, get_field_info('rho')['field'], it)
+        # DR formula requires LINEAR differential reflectivity; ZDR is
+        # stored in dB (sqrt of negative dB values silently masked the
+        # bird-typical gates)
+        zdr_lin = 10.0 ** (zdr / 10.0)
+        num = 1 + zdr_lin - 2 * (zdr_lin**0.5) * rho
+        den = 1 + zdr_lin + 2 * (zdr_lin**0.5) * rho
+        with np.errstate(invalid='ignore', divide='ignore'):
+            data = 10 * np.log10(num / den)
     else:
-        data = ds_t[param_info['field']].values
+        data = zarr_read_timestep(store, param_info['field'], it)
 
-    lon = ds_t.lon.values
-    lat = ds_t.lat.values
-    hgt = ds_t.z.values
+    lon = store['lon'][:]
+    lat = store['lat'][:]
+    hgt = store['z'][:]
 
     out = compute_vcross_grid(
         params, data, lon, lat, hgt

@@ -1,13 +1,10 @@
 import os
-import netCDF4 as nc
 import numpy as np
-import xarray as xr
-from datetime import datetime
+import zarr
 from .bio_info import get_class_info
 from app.scripts.util import (
-            open_zarr_retry,
-        data_grid_time_encoding,
-        cftime2datetime,
+        zarr_nearest_time,
+        zarr_read_timestep,
         response_download_json,
         response_download_error,
         response_download_image
@@ -66,25 +63,14 @@ def _vcross_section_bioclass(params):
     if not os.path.exists(zarr_path):
         return None
 
-    ds = open_zarr_retry(zarr_path)
-    time_encoding = data_grid_time_encoding()
-    time = nc.num2date(
-        ds.time.values,
-        units=time_encoding['units'],
-        calendar=time_encoding['calendar']
-    )
-    time = [cftime2datetime(t) for t in time]
-    format_time = '%Y-%m-%d %H:%M:%S'
-    time_req = datetime.strptime(params['time'], format_time)
-    it = min(range(len(time)), key=lambda i: abs(time[i] - time_req))
-    time_out = time[it].strftime(format_time)
-    ds_t = ds.isel(time=it)
+    store = zarr.open_group(zarr_path, mode='r')
+    it, time_out = zarr_nearest_time(store, params['time'])
     param_info = get_class_info(params['class'])
 
-    data = ds_t[param_info['field']].values
-    lon = ds_t.lon.values
-    lat = ds_t.lat.values
-    hgt = ds_t.z.values
+    data = zarr_read_timestep(store, param_info['field'], it)
+    lon = store['lon'][:]
+    lat = store['lat'][:]
+    hgt = store['z'][:]
 
     out = compute_vcross_grid(
         params, data, lon, lat, hgt

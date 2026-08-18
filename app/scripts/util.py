@@ -54,6 +54,34 @@ def decode_fill_value(attrs):
             return None
     return None
 
+def zarr_nearest_time(store, time_str):
+    """(index, time string) of the store timestep nearest the UTC time
+    string; store time is epoch seconds (data_grid_time_encoding)."""
+    time_s = store['time'][:].astype('int64')
+    t_req = int(
+        datetime.strptime(time_str, '%Y-%m-%d %H:%M:%S')
+        .replace(tzinfo=pytz.utc).timestamp()
+    )
+    it = int(np.abs(time_s - t_req).argmin())
+    out = datetime.fromtimestamp(
+        int(time_s[it]), tz=pytz.utc
+    ).strftime('%Y-%m-%d %H:%M:%S')
+    return it, out
+
+def zarr_read_timestep(store, field, it, iz=None):
+    """One timestep (full column or one level) read directly with zarr,
+    fill values masked to NaN. Avoids the xarray/dask per-request task
+    graph over the whole store, which ballooned workers to 7-11 GB."""
+    arr = store[field]
+    if iz is None:
+        data = np.asarray(arr[it], dtype='float64')
+    else:
+        data = np.asarray(arr[it, iz], dtype='float64')
+    f = decode_fill_value(dict(arr.attrs))
+    if f is not None:
+        data[data == f] = np.nan
+    return data
+
 def _cache_path(name, params):
     key = hashlib.sha256(
         json.dumps([name, params], sort_keys=True, default=str).encode()
