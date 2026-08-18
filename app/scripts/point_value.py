@@ -81,8 +81,15 @@ def get_point_value_json(params):
             )
 
     it, time_out = zarr_nearest_time(store, params['time'])
-    iy = _nearest_index(store['lat'][:], lat)
-    ix = _nearest_index(store['lon'][:], lon)
+    # grid/class stores keep lat/lon as 2D meshes (regular grid from
+    # meshgrid: lat varies along axis 0, lon along axis 1); the vertical
+    # store keeps 1D vectors
+    lat_arr = np.asarray(store['lat'][:], dtype='float64')
+    lon_arr = np.asarray(store['lon'][:], dtype='float64')
+    lat_vec = lat_arr[:, 0] if lat_arr.ndim == 2 else lat_arr
+    lon_vec = lon_arr[0, :] if lon_arr.ndim == 2 else lon_arr
+    iy = _nearest_index(lat_vec, lat)
+    ix = _nearest_index(lon_vec, lon)
     out = {'time': time_out, 'value': None, 'units': '', 'name': ''}
     if iy is None or ix is None:
         return response_download_json(out, 'point_value')
