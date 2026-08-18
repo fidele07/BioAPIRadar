@@ -112,16 +112,14 @@ def get_point_value_json(params):
         attrs = dict(arr.attrs)
         name = str(attrs.get('long_name', read_par))
         units = str(attrs.get('units', ''))
-        if derived_mtr and value is not None:
-            speed = _mean_ground_speed_kmh(
-                params['species'], time_out, radar_id
-            )
-            if speed is None:
-                value = None
-            else:
-                value = value * speed
+        if derived_mtr:
             name = 'Migration traffic rate'
             units = '#/km/h'
+            if value is not None:
+                speed = _mean_ground_speed_kmh(
+                    params['species'], time_out, radar_id
+                )
+                value = None if speed is None else value * speed
         out.update({'value': value, 'units': units, 'name': name})
 
     elif product == 'rgrid':
