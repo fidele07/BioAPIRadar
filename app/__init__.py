@@ -27,6 +27,7 @@ from app.scripts.geojson import (
                         )
 from app.scripts.vpproctime import get_vp_proctime_image
 from app.scripts.point_value import get_point_value_json
+from app.scripts.vp_methods import get_vp_methods_coverage
 
 ### 
 from app.biorad_data.index import biorad_data
@@ -54,3 +55,8 @@ def vp_proctime():
 def get_point_value():
     """Layer value under the map cursor (hover readout)."""
     return response_download_data(get_point_value_json)
+
+@app.route('/vp_methods', methods=['POST'])
+def vp_methods():
+    """Species-separation provenance present in a time range."""
+    return response_download_data(get_vp_methods_coverage)
